@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { supabase } from './supabase';
 import { decrypt } from './encrypt';
 

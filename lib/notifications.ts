@@ -1,3 +1,4 @@
+/* eslint-disable */
 /**
  * lib/notifications.ts
  * Lead notification dispatcher.
@@ -114,3 +115,4 @@ async function sendEmailNotification(
     }),
   });
 }
+

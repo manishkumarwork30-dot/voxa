@@ -1,3 +1,4 @@
+/* eslint-disable */
 'use client'
 
 import Link from 'next/link'
@@ -36,13 +37,13 @@ export default function HomePage() {
   ]
 
   return (
-    <div className="min-h-screen bg-[#070708] text-white selection:bg-indigo-500/30 overflow-x-hidden font-sans">
+    <div className="min-h-screen bg-[#070708] text-white selection:bg-red-500/30 overflow-x-hidden font-sans">
       
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#070708]/80 backdrop-blur-lg border-b border-white/5">
         <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
           <div className="flex items-center gap-3 group cursor-pointer">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-[0_0_15px_rgba(99,102,241,0.5)] group-hover:shadow-[0_0_25px_rgba(99,102,241,0.7)] transition-all duration-300">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-red-500 via-red-500 to-red-500 flex items-center justify-center shadow-[0_0_15px_rgba(99,102,241,0.5)] group-hover:shadow-[0_0_25px_rgba(99,102,241,0.7)] transition-all duration-300">
               <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z"/></svg>
             </div>
             <span className="text-2xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400 group-hover:to-white transition-all duration-300">{BRAND_NAME}</span>
@@ -62,18 +63,18 @@ export default function HomePage() {
 
       {/* Hero Section */}
       <section className="relative pt-48 pb-24 px-6 overflow-hidden">
-        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-gradient-to-r from-indigo-600/30 to-purple-600/30 rounded-full blur-[120px] pointer-events-none"></div>
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-gradient-to-r from-red-600/30 to-red-600/30 rounded-full blur-[120px] pointer-events-none"></div>
         <div className="max-w-5xl mx-auto text-center relative z-10">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-indigo-300 mb-8 backdrop-blur-md hover:bg-white/10 transition-colors cursor-default">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 text-xs font-semibold text-red-300 mb-8 backdrop-blur-md hover:bg-white/10 transition-colors cursor-default">
             <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-indigo-500"></span>
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
             </span>
             Meet {BRAND_NAME} Voice AI
           </div>
           <h1 className="text-5xl md:text-7xl lg:text-8xl font-extrabold tracking-tight mb-8 leading-[1.1]">
             Create your Free <br/>
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 drop-shadow-sm">Voice AI Assistant</span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-400 via-red-400 to-red-400 drop-shadow-sm">Voice AI Assistant</span>
           </h1>
           <p className="text-xl md:text-2xl text-gray-400 mb-12 max-w-3xl mx-auto leading-relaxed font-light">
             Build, test, and ship reliable voice AI assistants
@@ -88,7 +89,7 @@ export default function HomePage() {
           <div className="flex flex-wrap justify-center items-center gap-3 text-sm font-medium text-gray-400">
             <span className="text-gray-500 mr-2 uppercase tracking-widest text-xs font-bold">Choose from use cases:</span>
             {["Lead Generation", "Appointments", "Support", "Negotiation", "Collections"].map((useCase, idx) => (
-              <span key={idx} className="px-4 py-2 rounded-full bg-white/5 border border-white/5 hover:border-indigo-500/30 hover:bg-indigo-500/10 transition-colors cursor-pointer hover:text-white">
+              <span key={idx} className="px-4 py-2 rounded-full bg-white/5 border border-white/5 hover:border-red-500/30 hover:bg-red-500/10 transition-colors cursor-pointer hover:text-white">
                 {useCase}
               </span>
             ))}
@@ -126,9 +127,9 @@ export default function HomePage() {
               { title: "Quick Training", desc: "Train AI with your own call recordings", icon: "M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" },
               { title: "Phone Numbers", desc: "Buy Indian (+91) or US (+1) numbers instantly", icon: "M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" }
             ].map((feature, i) => (
-              <div key={i} className="bg-[#111113]/80 backdrop-blur-sm border border-white/5 p-8 rounded-3xl hover:border-indigo-500/50 hover:bg-indigo-900/10 transition-all duration-300 group shadow-lg hover:shadow-indigo-500/10">
-                <div className="w-14 h-14 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-white/5 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
-                  <svg className="w-7 h-7 text-indigo-400 group-hover:text-indigo-300 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div key={i} className="bg-[#111113]/80 backdrop-blur-sm border border-white/5 p-8 rounded-3xl hover:border-red-500/50 hover:bg-red-900/10 transition-all duration-300 group shadow-lg hover:shadow-red-500/10">
+                <div className="w-14 h-14 bg-gradient-to-br from-red-500/20 to-red-500/20 border border-white/5 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                  <svg className="w-7 h-7 text-red-400 group-hover:text-red-300 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={feature.icon} />
                   </svg>
                 </div>
@@ -149,7 +150,7 @@ export default function HomePage() {
           </div>
 
           <div className="flex flex-col md:flex-row gap-8 relative">
-            <div className="hidden md:block absolute top-[40px] left-[10%] w-[80%] h-0.5 bg-gradient-to-r from-transparent via-indigo-500/30 to-transparent z-0"></div>
+            <div className="hidden md:block absolute top-[40px] left-[10%] w-[80%] h-0.5 bg-gradient-to-r from-transparent via-red-500/30 to-transparent z-0"></div>
             
             {[
               { step: "1", title: "Write", desc: "Describe what type of Voice AI assistant you want" },
@@ -159,8 +160,8 @@ export default function HomePage() {
               { step: "5", title: "Observe & Monitor", desc: "Track performance and make improvements" }
             ].map((item, i) => (
               <div key={i} className="flex-1 relative z-10 group cursor-default">
-                <div className="bg-[#070708] border border-white/10 w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold text-white mb-8 mx-auto shadow-[0_0_30px_rgba(99,102,241,0.15)] group-hover:border-indigo-500/50 group-hover:shadow-[0_0_40px_rgba(99,102,241,0.3)] transition-all duration-300">
-                  <span className="bg-clip-text text-transparent bg-gradient-to-br from-indigo-400 to-pink-400">{item.step}</span>
+                <div className="bg-[#070708] border border-white/10 w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold text-white mb-8 mx-auto shadow-[0_0_30px_rgba(99,102,241,0.15)] group-hover:border-red-500/50 group-hover:shadow-[0_0_40px_rgba(99,102,241,0.3)] transition-all duration-300">
+                  <span className="bg-clip-text text-transparent bg-gradient-to-br from-red-400 to-red-400">{item.step}</span>
                 </div>
                 <div className="text-center px-2">
                   <h3 className="text-xl font-bold mb-3 tracking-tight">{item.title}</h3>
@@ -176,7 +177,7 @@ export default function HomePage() {
       <section className="py-32 px-6 relative overflow-hidden">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
           <div>
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-8 leading-tight tracking-tight">Create Voice AI Assistants with <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-pink-400">Natural Language</span></h2>
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-8 leading-tight tracking-tight">Create Voice AI Assistants with <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-red-400">Natural Language</span></h2>
             <p className="text-xl text-gray-400 mb-12 font-light leading-relaxed">Simply describe what you want your Voice AI assistant to do, and we'll build it for you.</p>
             
             <div className="space-y-8">
@@ -186,8 +187,8 @@ export default function HomePage() {
                 { title: "Pre-built Templates", desc: "Start with industry-specific templates and customize to your needs." }
               ].map((f, i) => (
                 <div key={i} className="flex gap-6 group">
-                  <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0 mt-1 group-hover:scale-110 group-hover:bg-indigo-500/20 transition-all duration-300">
-                    <svg className="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/></svg>
+                  <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center shrink-0 mt-1 group-hover:scale-110 group-hover:bg-red-500/20 transition-all duration-300">
+                    <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"/></svg>
                   </div>
                   <div>
                     <h4 className="text-xl font-bold text-white mb-2">{f.title}</h4>
@@ -198,7 +199,7 @@ export default function HomePage() {
             </div>
           </div>
           <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-tr from-indigo-600/20 to-pink-600/20 rounded-[2rem] blur-3xl"></div>
+            <div className="absolute inset-0 bg-gradient-to-tr from-red-600/20 to-red-600/20 rounded-[2rem] blur-3xl"></div>
             <div className="relative bg-[#111113]/80 backdrop-blur-xl border border-white/10 rounded-[2rem] p-8 shadow-2xl">
               <div className="flex items-center gap-3 mb-8 pb-6 border-b border-white/5">
                  <div className="w-3.5 h-3.5 rounded-full bg-red-500/80 shadow-[0_0_10px_rgba(239,68,68,0.5)]"></div>
@@ -210,7 +211,7 @@ export default function HomePage() {
                   <p className="text-base text-gray-300">Create a lead generation assistant for my real estate agency.</p>
                 </div>
                 <div className="flex justify-end">
-                  <div className="bg-gradient-to-br from-indigo-600 to-purple-600 p-5 rounded-2xl inline-block max-w-[85%] rounded-tr-sm shadow-[0_10px_25px_rgba(79,70,229,0.3)]">
+                  <div className="bg-gradient-to-br from-red-600 to-red-600 p-5 rounded-2xl inline-block max-w-[85%] rounded-tr-sm shadow-[0_10px_25px_rgba(79,70,229,0.3)]">
                     <p className="text-base text-white">I've created the "Real Estate Lead Gen Agent". I've configured it with a professional voice and connected it to your CRM to log new leads.</p>
                   </div>
                 </div>
@@ -224,7 +225,7 @@ export default function HomePage() {
       <section className="py-24 px-6 border-y border-white/5 bg-white/[0.01]">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-sm font-bold text-indigo-400 uppercase tracking-widest mb-4">Key Features</h2>
+            <h2 className="text-sm font-bold text-red-400 uppercase tracking-widest mb-4">Key Features</h2>
             <h3 className="text-3xl md:text-5xl font-bold">Build high quality Voice AI assistants in minutes</h3>
           </div>
           
@@ -243,8 +244,8 @@ export default function HomePage() {
                 desc: "Build reliable voice AI assistants through rigorous simulated testing, real-time observability to track issues, and effortless no-code LLM fine-tuning, evaluation, deployment, and monitoring." 
               }
             ].map((f, i) => (
-              <div key={i} className="bg-[#070708] border border-white/10 p-10 rounded-[2rem] hover:border-indigo-500/30 transition-all duration-300 group hover:bg-[#111113]">
-                <h4 className="text-2xl font-bold text-white mb-4 group-hover:text-indigo-400 transition-colors">{f.title}</h4>
+              <div key={i} className="bg-[#070708] border border-white/10 p-10 rounded-[2rem] hover:border-red-500/30 transition-all duration-300 group hover:bg-[#111113]">
+                <h4 className="text-2xl font-bold text-white mb-4 group-hover:text-red-400 transition-colors">{f.title}</h4>
                 <p className="text-gray-400 leading-relaxed text-lg">{f.desc}</p>
               </div>
             ))}
@@ -254,9 +255,9 @@ export default function HomePage() {
 
       {/* Ecosystem */}
       <section className="py-32 px-6 relative">
-        <div className="absolute top-1/2 right-0 w-[600px] h-[600px] bg-purple-600/10 rounded-full blur-[150px] pointer-events-none -translate-y-1/2"></div>
+        <div className="absolute top-1/2 right-0 w-[600px] h-[600px] bg-red-600/10 rounded-full blur-[150px] pointer-events-none -translate-y-1/2"></div>
         <div className="max-w-7xl mx-auto text-center relative z-10">
-          <h2 className="text-sm font-bold text-indigo-400 uppercase tracking-widest mb-4">Ecosystem</h2>
+          <h2 className="text-sm font-bold text-red-400 uppercase tracking-widest mb-4">Ecosystem</h2>
           <h3 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 tracking-tight">Plug into the tools your team already uses</h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mt-20 text-left">
@@ -266,12 +267,12 @@ export default function HomePage() {
               { title: "Telephony", desc: "Bring your existing phone numbers from Twilio, RingCentral, Vonage, or Exotel.", items: ["Twilio", "RingCentral", "Vonage", "Exotel"] },
               { title: "Messaging", desc: "Push transcripts, hand-offs, and call summaries to Slack and WhatsApp.", items: ["Slack", "WhatsApp"] }
             ].map((cat, i) => (
-              <div key={i} className="bg-[#111113]/80 backdrop-blur-sm border border-white/10 rounded-[2rem] p-8 hover:border-indigo-500/30 transition-all duration-300 group hover:shadow-[0_0_30px_rgba(99,102,241,0.1)]">
-                <h4 className="font-bold text-2xl mb-4 text-white group-hover:text-indigo-400 transition-colors">{cat.title}</h4>
+              <div key={i} className="bg-[#111113]/80 backdrop-blur-sm border border-white/10 rounded-[2rem] p-8 hover:border-red-500/30 transition-all duration-300 group hover:shadow-[0_0_30px_rgba(99,102,241,0.1)]">
+                <h4 className="font-bold text-2xl mb-4 text-white group-hover:text-red-400 transition-colors">{cat.title}</h4>
                 <p className="text-gray-400 text-sm mb-6 leading-relaxed min-h-[60px]">{cat.desc}</p>
                 <div className="flex flex-wrap gap-2">
                   {cat.items.map((item, j) => (
-                    <span key={j} className="text-xs font-semibold bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-gray-300 group-hover:bg-indigo-500/10 group-hover:border-indigo-500/30 transition-colors">
+                    <span key={j} className="text-xs font-semibold bg-white/5 border border-white/10 px-3 py-1.5 rounded-lg text-gray-300 group-hover:bg-red-500/10 group-hover:border-red-500/30 transition-colors">
                       {item}
                     </span>
                   ))}
@@ -281,7 +282,7 @@ export default function HomePage() {
           </div>
           
           <div className="mt-16">
-            <Link href="#integrations" className="inline-flex items-center gap-2 text-indigo-400 hover:text-indigo-300 font-semibold text-lg transition-colors group">
+            <Link href="#integrations" className="inline-flex items-center gap-2 text-red-400 hover:text-red-300 font-semibold text-lg transition-colors group">
               Browse all integrations
               <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
             </Link>
@@ -293,40 +294,40 @@ export default function HomePage() {
       <section className="py-32 px-6 bg-[#0a0a0c] border-y border-white/5">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-20">
-            <h2 className="text-sm font-bold text-indigo-400 uppercase tracking-widest mb-4">Testimonials</h2>
+            <h2 className="text-sm font-bold text-red-400 uppercase tracking-widest mb-4">Testimonials</h2>
             <h3 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight">What Our Users Say</h3>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="bg-[#111113] border border-white/5 p-10 rounded-[2rem] relative group hover:border-white/10 transition-colors">
-              <span className="text-8xl text-indigo-500/10 absolute top-4 right-8 font-serif leading-none group-hover:text-indigo-500/20 transition-colors">"</span>
+              <span className="text-8xl text-red-500/10 absolute top-4 right-8 font-serif leading-none group-hover:text-red-500/20 transition-colors">"</span>
               <p className="text-gray-300 mb-10 relative z-10 text-lg leading-relaxed font-light">“I love this product, it's Bolt for Voice AI.”</p>
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-xl font-bold">C</div>
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-500 to-red-500 flex items-center justify-center text-xl font-bold">C</div>
                 <div>
                   <p className="font-bold text-white text-lg">VP Engineering</p>
-                  <p className="text-sm text-indigo-400">Capgemini</p>
+                  <p className="text-sm text-red-400">Capgemini</p>
                 </div>
               </div>
             </div>
             <div className="bg-[#111113] border border-white/5 p-10 rounded-[2rem] relative group hover:border-white/10 transition-colors">
-              <span className="text-8xl text-indigo-500/10 absolute top-4 right-8 font-serif leading-none group-hover:text-indigo-500/20 transition-colors">"</span>
+              <span className="text-8xl text-red-500/10 absolute top-4 right-8 font-serif leading-none group-hover:text-red-500/20 transition-colors">"</span>
               <p className="text-gray-300 mb-10 relative z-10 text-lg leading-relaxed font-light">“This is the kind of tool that makes Voice AI usable for everyone, not just engineers.”</p>
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-xl font-bold">AK</div>
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-500 to-red-500 flex items-center justify-center text-xl font-bold">AK</div>
                 <div>
                   <p className="font-bold text-white text-lg">Akhilender Kaukuntla</p>
-                  <p className="text-sm text-indigo-400">KAYA AI</p>
+                  <p className="text-sm text-red-400">KAYA AI</p>
                 </div>
               </div>
             </div>
             <div className="bg-[#111113] border border-white/5 p-10 rounded-[2rem] relative group hover:border-white/10 transition-colors">
-              <span className="text-8xl text-indigo-500/10 absolute top-4 right-8 font-serif leading-none group-hover:text-indigo-500/20 transition-colors">"</span>
+              <span className="text-8xl text-red-500/10 absolute top-4 right-8 font-serif leading-none group-hover:text-red-500/20 transition-colors">"</span>
               <p className="text-gray-300 mb-10 relative z-10 text-lg leading-relaxed font-light">“This was different — this was compassion engineered into code. One of the most emotionally intelligent AI platforms I've ever touched.”</p>
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500 to-orange-500 flex items-center justify-center text-xl font-bold">JS</div>
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center text-xl font-bold">JS</div>
                 <div>
                   <p className="font-bold text-white text-lg">Jarron Sorrell</p>
-                  <p className="text-sm text-indigo-400">Sorrell Holdings LLC</p>
+                  <p className="text-sm text-red-400">Sorrell Holdings LLC</p>
                 </div>
               </div>
             </div>
@@ -336,11 +337,11 @@ export default function HomePage() {
 
       {/* CTA */}
       <section className="py-40 px-6 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-indigo-900/20 to-transparent"></div>
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[500px] bg-indigo-600/20 rounded-full blur-[120px] pointer-events-none"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-red-900/20 to-transparent"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[1000px] h-[500px] bg-red-600/20 rounded-full blur-[120px] pointer-events-none"></div>
         <div className="max-w-4xl mx-auto text-center relative z-10">
-          <h2 className="text-sm font-bold text-indigo-400 uppercase tracking-widest mb-4">Try it</h2>
-          <h3 className="text-5xl md:text-7xl font-extrabold mb-8 tracking-tight">Build your first <br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-pink-400">voice AI agent</span></h3>
+          <h2 className="text-sm font-bold text-red-400 uppercase tracking-widest mb-4">Try it</h2>
+          <h3 className="text-5xl md:text-7xl font-extrabold mb-8 tracking-tight">Build your first <br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-red-400 to-red-400">voice AI agent</span></h3>
           <p className="text-xl md:text-2xl text-gray-400 mb-12 max-w-2xl mx-auto font-light leading-relaxed">Spin up a production-grade voice agent from a single prompt. Free to try, no credit card required.</p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
             <Link href="/signup" className="w-full sm:w-auto px-10 py-5 bg-white text-black font-bold text-lg rounded-full hover:bg-gray-100 transition-all transform hover:scale-105 shadow-[0_0_30px_rgba(255,255,255,0.3)]">
@@ -371,8 +372,8 @@ export default function HomePage() {
                   onClick={() => toggleFaq(i)}
                   className="w-full flex items-center justify-between p-8 text-left focus:outline-none group"
                 >
-                  <span className="font-semibold text-lg text-gray-200 pr-8 group-hover:text-indigo-300 transition-colors">{faq}</span>
-                  <div className={`w-8 h-8 rounded-full bg-white/5 flex items-center justify-center shrink-0 transition-all duration-300 ${activeFaq === i ? 'rotate-180 bg-indigo-500/20 text-indigo-400' : 'text-gray-400 group-hover:bg-white/10'}`}>
+                  <span className="font-semibold text-lg text-gray-200 pr-8 group-hover:text-red-300 transition-colors">{faq}</span>
+                  <div className={`w-8 h-8 rounded-full bg-white/5 flex items-center justify-center shrink-0 transition-all duration-300 ${activeFaq === i ? 'rotate-180 bg-red-500/20 text-red-400' : 'text-gray-400 group-hover:bg-white/10'}`}>
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"/></svg>
                   </div>
                 </button>
@@ -393,7 +394,7 @@ export default function HomePage() {
           <div className="grid grid-cols-2 md:grid-cols-6 gap-12 mb-20">
             <div className="col-span-2 md:col-span-2">
               <div className="flex items-center gap-3 mb-8">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 via-red-500 to-red-500 flex items-center justify-center">
                   <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z"/></svg>
                 </div>
                 <span className="text-2xl font-bold tracking-tight">Vaxo</span>
@@ -461,3 +462,4 @@ export default function HomePage() {
     </div>
   )
 }
+

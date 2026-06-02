@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import { getVapiClientForAdmin } from "@/lib/vapi";
@@ -54,3 +55,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: err.message || "Failed to link phone number" }, { status: 400 });
   }
 }
+

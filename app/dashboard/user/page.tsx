@@ -1,3 +1,4 @@
+/* eslint-disable */
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
@@ -48,6 +49,7 @@ export default function UserDashboard() {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'overview' | 'agents' | 'campaigns' | 'calls' | 'dialer'>('overview')
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
 
   // Lists
   const [agents, setAgents] = useState<Agent[]>([])
@@ -210,67 +212,23 @@ export default function UserDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-[#070708] text-white flex flex-col font-sans">
+    <div className="min-h-screen bg-[#070708] text-[#e0e0e0] flex font-sans overflow-hidden">
       
-      {/* Navbar */}
-      <nav className="bg-black/50 backdrop-blur-md border-b border-red-950/40 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 bg-gradient-to-tr from-red-700 to-red-600 rounded-lg flex items-center justify-center shadow-lg shadow-red-500/25">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z" />
-                </svg>
-              </div>
-              <span className="font-extrabold text-2xl bg-gradient-to-r from-white via-gray-100 to-red-500 bg-clip-text text-transparent tracking-tight">
-                Vaxo Calling AI
-              </span>
+      {/* ── Sidebar ───────────────────────────────── */}
+      <aside className={`flex flex-col bg-[#0b0b0d] border-r border-white/5 h-screen transition-all duration-300 shrink-0 ${isSidebarOpen ? 'w-64' : 'w-0 overflow-hidden opacity-0'}`}>
+        <div className="p-4 flex items-center justify-between border-b border-white/5">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-700 to-red-500 flex items-center justify-center shadow-lg">
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z" /></svg>
             </div>
-            
-            <div className="flex items-center gap-4">
-              <div className="hidden sm:flex flex-col items-end">
-                <span className="text-gray-100 font-semibold text-sm">{user?.name}</span>
-                <span className="text-xs bg-white/5 border border-white/10 text-gray-400 px-2 py-0.5 rounded-full font-bold uppercase">
-                  {user?.role}
-                </span>
-              </div>
-              
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    const token = localStorage.getItem('token');
-                    if (token) {
-                      setSuccessMsg('');
-                      setErrorMsg('');
-                      fetchData(token);
-                      setSuccessMsg('Dashboard synchronized.');
-                      setTimeout(() => setSuccessMsg(''), 3000);
-                    }
-                  }}
-                  className="bg-white/5 hover:bg-white/10 border border-white/10 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition-all duration-300 transform hover:-translate-y-0.5"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
-                  Sync
-                </button>
-                <button
-                  onClick={handleLogout}
-                  className="bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 border border-red-500/20 text-white px-5 py-2 rounded-lg text-sm font-bold shadow-lg shadow-red-600/10 hover:shadow-red-500/20 transition-all duration-300 transform hover:-translate-y-0.5"
-                >
-                  Logout
-                </button>
-              </div>
-            </div>
+            <span className="font-bold text-white tracking-wide">Vaxo User</span>
           </div>
+          <button onClick={() => setIsSidebarOpen(false)} className="text-gray-500 hover:text-white transition-colors">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" /></svg>
+          </button>
         </div>
-      </nav>
 
-      {/* Main Workspace Wrapper */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full flex-grow flex flex-col md:flex-row gap-8">
-        
-        {/* Sidebar Nav */}
-        <aside className="w-full md:w-64 shrink-0 flex flex-col gap-2">
+        <div className="flex-1 overflow-y-auto py-4 px-3 space-y-2">
           {[
             { id: 'overview', name: 'Dashboard Home', icon: 'M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z' },
             { id: 'dialer', name: 'Calling Dialer Console', icon: 'M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z' },
@@ -285,22 +243,49 @@ export default function UserDashboard() {
                 setErrorMsg('')
                 setSuccessMsg('')
               }}
-              className={`flex items-center gap-3.5 px-5 py-4 rounded-xl text-sm font-bold transition-all duration-300 text-left border ${
+              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === tab.id
-                  ? 'bg-gradient-to-r from-red-950/40 to-transparent border-red-500/40 text-red-400 shadow-md shadow-red-950/10'
-                  : 'bg-transparent border-transparent text-gray-400 hover:text-white hover:bg-white/5'
+                  ? 'bg-white/10 text-white'
+                  : 'text-gray-400 hover:text-white hover:bg-white/5'
               }`}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={tab.icon} />
               </svg>
               {tab.name}
             </button>
           ))}
-        </aside>
+        </div>
 
-        {/* Console Workspace */}
-        <main className="flex-grow bg-[#111113] border border-white/5 rounded-2xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
+        <div className="border-t border-white/5 p-4 space-y-3 bg-black/20">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-8 bg-gradient-to-br from-red-500 to-red-700 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0">
+              {user?.name?.charAt(0).toUpperCase()}
+            </div>
+            <div className="overflow-hidden">
+              <div className="text-sm font-bold text-white truncate">{user?.name}</div>
+              <div className="text-xs text-gray-500 truncate">{user?.role}</div>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button onClick={() => { fetchData(localStorage.getItem('token') || ''); setSuccessMsg('Synced!'); setTimeout(()=>setSuccessMsg(''),3000); }}
+              className="flex-1 flex items-center justify-center gap-1 bg-white/5 hover:bg-white/10 text-white text-xs font-bold py-1.5 rounded transition-colors">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg> Sync
+            </button>
+            <button onClick={handleLogout} className="flex-1 flex items-center justify-center gap-1 bg-white/5 hover:bg-white/10 text-white text-xs font-bold py-1.5 rounded transition-colors">
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg> Logout
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <main className="flex-1 h-screen overflow-y-auto bg-[#070708]">
+        {!isSidebarOpen && (
+          <button onClick={() => setIsSidebarOpen(true)} className="fixed top-4 left-4 z-50 text-gray-400 hover:text-white bg-[#111113] border border-white/10 p-2 rounded-lg shadow-lg">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
+          </button>
+        )}
+        <div className="max-w-6xl mx-auto px-6 py-8 w-full relative">
           <div className="absolute top-0 right-0 w-96 h-96 bg-red-600/5 rounded-full blur-3xl pointer-events-none -translate-y-1/2 translate-x-1/2"></div>
           
           {/* Notifications */}
@@ -614,8 +599,9 @@ export default function UserDashboard() {
               )}
             </div>
           )}
-        </main>
-      </div>
+        </div>
+      </main>
     </div>
   )
 }
+

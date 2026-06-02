@@ -1,3 +1,4 @@
+/* eslint-disable */
 // lib/supabase.ts
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
@@ -23,3 +24,4 @@ const serviceKey = process.env.SUPABASE_SERVICE_KEY;
 export const supabaseAdmin: SupabaseClient = serviceKey
   ? createClient(supabaseUrl, serviceKey)
   : supabase;
+

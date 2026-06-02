@@ -1,0 +1,18 @@
+
+> auth@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.104:3000
+- Environments: .env.local, .env
+✓ Ready in 1764ms
+
+ GET / 200 in 1866ms (next.js: 1009ms, application-code: 857ms)
+ GET /signup 200 in 250ms (next.js: 143ms, application-code: 107ms)
+ POST /api/auth/signup 201 in 5.5s (next.js: 3.8s, application-code: 1758ms)
+ GET /dashboard/user 200 in 2.2s (next.js: 1891ms, proxy.ts: 234ms, application-code: 104ms)
+ GET /login 200 in 208ms (next.js: 128ms, application-code: 80ms)
+ POST /api/auth/login 500 in 953ms (next.js: 145ms, application-code: 808ms)
+ GET /login 200 in 1406ms (next.js: 50ms, application-code: 1357ms)
+ GET / 200 in 135ms (next.js: 14ms, application-code: 121ms)

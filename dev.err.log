@@ -1,0 +1,10 @@
+Login error: Error: Illegal arguments: string, undefined
+    at new Promise (<anonymous>)
+    at POST (app\api\auth\login\route.ts:31:42)
+  29 |     }
+  30 |
+> 31 |     const isPasswordValid = await bcrypt.compare(password, user.password_hash);
+     |                                          ^
+  32 |
+  33 |     if (!isPasswordValid) {
+  34 |       return NextResponse.json(

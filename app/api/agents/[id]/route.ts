@@ -1,0 +1,110 @@
+import { NextRequest, NextResponse } from "next/server";
+import jwt from "jsonwebtoken";
+import { supabase } from "@/lib/supabase";
+import { getVapiClientForAdmin, getLanguageCode } from "@/lib/vapi";
+
+const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-this-in-production";
+
+function getAuth(request: NextRequest) {
+  const authHeader = request.headers.get("authorization");
+  if (!authHeader?.startsWith("Bearer ")) return null;
+  try {
+    return jwt.verify(authHeader.replace("Bearer ", ""), JWT_SECRET) as {
+      role?: string; userId?: string; adminId?: string;
+    };
+  } catch {
+    return null;
+  }
+}
+
+// GET /api/agents/[id]
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const decoded = getAuth(request);
+  if (!decoded) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { id } = await params;
+  const adminId = decoded.role === "USER" ? decoded.adminId : decoded.userId;
+  let query = supabase.from("agents").select("*").eq("id", id);
+  if (decoded.role !== "SUPER_ADMIN") query = query.eq("admin_id", adminId!);
+
+  const { data: agent, error } = await query.single();
+  if (error || !agent) return NextResponse.json({ error: "Agent not found" }, { status: 404 });
+
+  return NextResponse.json({ agent });
+}
+
+// PATCH /api/agents/[id]
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const decoded = getAuth(request);
+  if (!decoded) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (decoded.role !== "ADMIN") return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
+
+  const adminId = decoded.userId!;
+  const { id } = await params;
+
+  // Check ownership
+  const { data: existingAgent } = await supabase
+    .from("agents").select("*").eq("id", id).eq("admin_id", adminId).single();
+  if (!existingAgent) return NextResponse.json({ error: "Agent not found" }, { status: 404 });
+
+  const body = await request.json();
+  const { name, system_prompt, voice_model, language, status, flow_builder, tone } = body;
+
+  const updates: Record<string, any> = { updated_at: new Date().toISOString() };
+  if (name) updates.name = name;
+  if (system_prompt) updates.system_prompt = system_prompt;
+  if (voice_model) updates.voice_model = voice_model;
+  if (language) updates.language = language;
+  if (status) updates.status = status;
+  if (flow_builder) updates.flow_builder = flow_builder;
+  if (tone) updates.tone = tone;
+
+  // Sync to VAPI if linked
+  if (existingAgent.vapi_agent_id && !existingAgent.vapi_agent_id.startsWith("placeholder_")) {
+    try {
+      const vapiClient = await getVapiClientForAdmin(adminId);
+      await vapiClient.updateAgent(existingAgent.vapi_agent_id, {
+        name: name || existingAgent.name,
+        systemPrompt: system_prompt || existingAgent.system_prompt,
+        voiceId: voice_model || existingAgent.voice_model,
+        language: getLanguageCode(language || existingAgent.language),
+      });
+    } catch (err) {
+      console.error("VAPI agent update failed:", err);
+    }
+  }
+
+  const { data: agent, error } = await supabase
+    .from("agents").update(updates).eq("id", id).select("*").single();
+
+  if (error) return NextResponse.json({ error: "Failed to update agent" }, { status: 500 });
+  return NextResponse.json({ message: "Agent updated", agent });
+}
+
+// DELETE /api/agents/[id]
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const decoded = getAuth(request);
+  if (!decoded) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (decoded.role !== "ADMIN") return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
+
+  const adminId = decoded.userId!;
+  const { id } = await params;
+  const { data: existingAgent } = await supabase
+    .from("agents").select("*").eq("id", id).eq("admin_id", adminId).single();
+  if (!existingAgent) return NextResponse.json({ error: "Agent not found" }, { status: 404 });
+
+  // Delete from VAPI first
+  if (existingAgent.vapi_agent_id && !existingAgent.vapi_agent_id.startsWith("placeholder_")) {
+    try {
+      const vapiClient = await getVapiClientForAdmin(adminId);
+      await vapiClient.deleteAgent(existingAgent.vapi_agent_id);
+    } catch (err) {
+      console.error("VAPI agent deletion failed:", err);
+    }
+  }
+
+  // Mark as DELETED in DB (soft delete)
+  await supabase.from("agents").update({ status: "DELETED" }).eq("id", id);
+
+  return NextResponse.json({ message: "Agent deleted" });
+}

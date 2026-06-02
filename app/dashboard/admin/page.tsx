@@ -435,7 +435,7 @@ export default function AdminDashboard() {
           ))}
           {user?.role?.toUpperCase() === 'SUPER_ADMIN' && (
             <div className="mt-4 pt-4 border-t border-white/5">
-              <button onClick={() => router.push('/dashboard/super-admin')} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold text-red-400 hover:bg-red-500/10 transition-colors">
+              <button onClick={() => router.push('/dashboard/super-admin')} className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold text-blue-400 hover:bg-blue-500/10 transition-colors">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 002 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
                 Manage Tenants
               </button>
@@ -451,7 +451,7 @@ export default function AdminDashboard() {
               <span className="text-sm font-bold text-indigo-400">{callsUsed}/{callsLimit}</span>
             </div>
             <div className="w-full bg-white/5 rounded-full h-1.5">
-              <div className={`h-1.5 rounded-full transition-all ${usagePct > 80 ? 'bg-red-500' : 'bg-indigo-500'}`} style={{ width: `${usagePct}%` }}></div>
+              <div className={`h-1.5 rounded-full transition-all ${usagePct > 80 ? 'bg-blue-500' : 'bg-indigo-500'}`} style={{ width: `${usagePct}%` }}></div>
             </div>
             <div className="flex gap-2">
               {(['PRO', 'ENTERPRISE'] as const).filter(p => p !== user?.plan).map(plan => (
@@ -670,7 +670,7 @@ export default function AdminDashboard() {
                             }
                           </td>
                           <td className="py-3 px-4">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${agent.status === 'ACTIVE' ? 'bg-green-950/40 border-green-500/20 text-green-400' : 'bg-red-950/40 border-red-500/20 text-red-400'}`}>{agent.status}</span>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase border ${agent.status === 'ACTIVE' ? 'bg-green-950/40 border-green-500/20 text-green-400' : 'bg-blue-950/40 border-blue-500/20 text-blue-400'}`}>{agent.status}</span>
                           </td>
                           <td className="py-3 px-4 text-right">
                             <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -778,7 +778,7 @@ export default function AdminDashboard() {
                             <span className={`w-2 h-2 rounded-full ${call.direction === 'INBOUND' ? 'bg-blue-500' : 'bg-purple-500'}`}></span>
                             <span className="text-white font-mono text-sm">{call.caller_number}</span>
                             <span className="text-xs text-gray-500 bg-white/5 px-2 py-0.5 rounded">{call.direction}</span>
-                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${call.status === 'COMPLETED' ? 'bg-green-950/40 border-green-500/20 text-green-400' : call.status === 'FAILED' ? 'bg-red-950/40 border-red-500/20 text-red-400' : 'bg-yellow-950/40 border-yellow-500/20 text-yellow-400'}`}>{call.status}</span>
+                            <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${call.status === 'COMPLETED' ? 'bg-green-950/40 border-green-500/20 text-green-400' : call.status === 'FAILED' ? 'bg-blue-950/40 border-blue-500/20 text-blue-400' : 'bg-yellow-950/40 border-yellow-500/20 text-yellow-400'}`}>{call.status}</span>
                           </div>
                           <div className="flex items-center gap-4 text-xs text-gray-500">
                             <span>{formatDuration(call.duration_sec)}</span>
@@ -1009,7 +1009,7 @@ export default function AdminDashboard() {
                     <div>
                       <div className="flex justify-between text-xs text-gray-400 mb-1.5"><span>Monthly Calls</span><span>{callsUsed} / {callsLimit}</span></div>
                       <div className="w-full bg-white/5 rounded-full h-3">
-                        <div className={`h-3 rounded-full ${usagePct > 80 ? 'bg-red-500' : 'bg-indigo-500'}`} style={{ width: `${usagePct}%` }}></div>
+                        <div className={`h-3 rounded-full ${usagePct > 80 ? 'bg-blue-500' : 'bg-indigo-500'}`} style={{ width: `${usagePct}%` }}></div>
                       </div>
                     </div>
                     <div className="text-sm text-gray-400">Plan: <span className="text-white font-bold">{user?.plan}</span></div>
@@ -1048,7 +1048,7 @@ export default function AdminDashboard() {
                       </button>
                     </div>
                     {vapiTestResult && (
-                      <p className={`mt-2 text-xs font-bold ${vapiTestResult.valid ? 'text-green-400' : 'text-red-400'}`}>{vapiTestResult.message}</p>
+                      <p className={`mt-2 text-xs font-bold ${vapiTestResult.valid ? 'text-green-400' : 'text-blue-400'}`}>{vapiTestResult.message}</p>
                     )}
                     <p className="text-xs text-gray-500 mt-1.5">Get your key from <a href="https://dashboard.vapi.ai" target="_blank" className="text-indigo-400 hover:underline">dashboard.vapi.ai</a></p>
                   </div>
@@ -1128,7 +1128,7 @@ export default function AdminDashboard() {
                             <td className="py-3 text-white">{su.name}</td>
                             <td className="py-3 text-gray-400">{su.email}</td>
                             <td className="py-3">
-                              <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded-full border ${su.is_active ? 'bg-green-950/40 border-green-500/20 text-green-400' : 'bg-red-950/40 border-red-500/20 text-red-400'}`}>{su.is_active ? 'Active' : 'Suspended'}</span>
+                              <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded-full border ${su.is_active ? 'bg-green-950/40 border-green-500/20 text-green-400' : 'bg-blue-950/40 border-blue-500/20 text-blue-400'}`}>{su.is_active ? 'Active' : 'Suspended'}</span>
                             </td>
                           </tr>
                         ))}

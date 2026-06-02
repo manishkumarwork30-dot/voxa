@@ -204,7 +204,7 @@ const handleAssignPlan = async (targetUserId: string, selectedPlan: string) => {
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-black">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-red-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-blue-500"></div>
       </div>
     )
   }
@@ -239,7 +239,7 @@ const handleAssignPlan = async (targetUserId: string, selectedPlan: string) => {
       <aside className={`flex flex-col bg-[#0b0b0d] border-r border-white/5 h-screen transition-all duration-300 shrink-0 ${isSidebarOpen ? 'w-64' : 'w-0 overflow-hidden opacity-0'}`}>
         <div className="p-4 flex items-center justify-between border-b border-white/5">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 via-red-500 to-red-500 flex items-center justify-center shadow-lg">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 via-blue-500 to-blue-500 flex items-center justify-center shadow-lg">
               <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z" /></svg>
             </div>
             <span className="font-bold text-white tracking-wide">Vaxo</span>
@@ -253,7 +253,7 @@ const handleAssignPlan = async (targetUserId: string, selectedPlan: string) => {
         <div className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
           {navSections.map(section => (
             <div key={section.label}>
-              <h3 className="text-[10px] font-bold text-white bg-red-600 px-1.5 py-0.5 rounded uppercase tracking-wider mx-3 mb-2 inline-block">{section.label}</h3>
+              <h3 className="text-[10px] font-bold text-white bg-blue-600 px-1.5 py-0.5 rounded uppercase tracking-wider mx-3 mb-2 inline-block">{section.label}</h3>
               <div className="space-y-0.5">
                 {section.items.map(item => (
                   <button key={item.id}
@@ -276,7 +276,7 @@ const handleAssignPlan = async (targetUserId: string, selectedPlan: string) => {
         {/* User footer */}
         <div className="border-t border-white/5 p-4 space-y-3 bg-black/20">
           <div className="flex items-center gap-3">
-            <div className="h-8 w-8 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0">
+            <div className="h-8 w-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0">
               {user?.name?.charAt(0).toUpperCase() || 'S'}
             </div>
             <div className="overflow-hidden">
@@ -320,7 +320,7 @@ const handleAssignPlan = async (targetUserId: string, selectedPlan: string) => {
           <div className={`p-4 rounded-xl border flex items-center gap-3 ${
             messageType === 'success'
               ? 'bg-green-950/40 border-green-500/30 text-green-400'
-              : 'bg-red-950/40 border-red-500/30 text-red-400'
+              : 'bg-blue-950/40 border-blue-500/30 text-blue-400'
           }`}>
             <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               {messageType === 'success' ? (
@@ -337,7 +337,7 @@ const handleAssignPlan = async (targetUserId: string, selectedPlan: string) => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="bg-[#111113] rounded-xl p-6 border border-white/5 flex flex-col justify-between shadow-lg">
             <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">Monthly Recurring Revenue</span>
-            <span className="text-3xl font-extrabold text-red-400 mt-4">${mrr} <span className="text-xs text-gray-500">/ MRR</span></span>
+            <span className="text-3xl font-extrabold text-blue-400 mt-4">${mrr} <span className="text-xs text-gray-500">/ MRR</span></span>
           </div>
 
           <div className="bg-[#111113] rounded-xl p-6 border border-white/5 flex flex-col justify-between shadow-lg">
@@ -366,7 +366,7 @@ const handleAssignPlan = async (targetUserId: string, selectedPlan: string) => {
             </div>
             <button
               onClick={() => setShowCreateForm(!showCreateForm)}
-              className="bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 text-white font-bold text-sm px-6 py-3 rounded-lg shadow-md transition-all duration-300 transform hover:-translate-y-0.5"
+              className="bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-600 hover:to-blue-500 text-white font-bold text-sm px-6 py-3 rounded-lg shadow-md transition-all duration-300 transform hover:-translate-y-0.5"
             >
               {showCreateForm ? 'Cancel' : 'Create New Tenant Admin'}
             </button>
@@ -374,7 +374,7 @@ const handleAssignPlan = async (targetUserId: string, selectedPlan: string) => {
 
           {/* Form to create admin */}
           {showCreateForm && (
-            <form onSubmit={handleCreateAdmin} className="mb-8 p-6 bg-black/40 rounded-xl border border-red-500/25 space-y-4">
+            <form onSubmit={handleCreateAdmin} className="mb-8 p-6 bg-black/40 rounded-xl border border-blue-500/25 space-y-4">
               <h4 className="text-white font-bold text-base mb-2">Create New Tenant Admin</h4>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
@@ -383,7 +383,7 @@ const handleAssignPlan = async (targetUserId: string, selectedPlan: string) => {
                     type="text"
                     value={newAdmin.name}
                     onChange={(e) => setNewAdmin({ ...newAdmin, name: e.target.value })}
-                    className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-red-500 transition-colors"
+                    className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500 transition-colors"
                     required
                   />
                 </div>
@@ -393,7 +393,7 @@ const handleAssignPlan = async (targetUserId: string, selectedPlan: string) => {
                     type="email"
                     value={newAdmin.email}
                     onChange={(e) => setNewAdmin({ ...newAdmin, email: e.target.value })}
-                    className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-red-500 transition-colors"
+                    className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500 transition-colors"
                     required
                   />
                 </div>
@@ -403,7 +403,7 @@ const handleAssignPlan = async (targetUserId: string, selectedPlan: string) => {
                     type="password"
                     value={newAdmin.password}
                     onChange={(e) => setNewAdmin({ ...newAdmin, password: e.target.value })}
-                    className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-red-500 transition-colors"
+                    className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-blue-500 transition-colors"
                     required
                     minLength={6}
                   />
@@ -412,7 +412,7 @@ const handleAssignPlan = async (targetUserId: string, selectedPlan: string) => {
               <div className="flex gap-2">
                 <button
                   type="submit"
-                  className="bg-red-600 hover:bg-red-500 text-white font-bold px-6 py-2.5 rounded-lg text-xs"
+                  className="bg-blue-600 hover:bg-blue-500 text-white font-bold px-6 py-2.5 rounded-lg text-xs"
                 >
                   Create Admin Account
                 </button>
@@ -443,7 +443,7 @@ const handleAssignPlan = async (targetUserId: string, selectedPlan: string) => {
                       <td className="py-4 px-6">
                         <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold border ${
                           u.role.toUpperCase() === 'SUPER_ADMIN'
-                            ? 'bg-red-950 border-red-500/40 text-red-400'
+                            ? 'bg-blue-950 border-blue-500/40 text-blue-400'
                             : u.role.toUpperCase() === 'ADMIN'
                             ? 'bg-blue-950 border-blue-500/20 text-blue-400'
                             : 'bg-white/5 border-white/10 text-gray-400'
@@ -456,7 +456,7 @@ const handleAssignPlan = async (targetUserId: string, selectedPlan: string) => {
                           <select
                             value={u.plan || 'STARTER'}
                             onChange={(e) => handleAssignPlan(u.id, e.target.value)}
-                            className="bg-black border border-white/10 rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-red-500"
+                            className="bg-black border border-white/10 rounded-lg px-2 py-1 text-xs text-white outline-none focus:border-blue-500"
                           >
                             <option value="STARTER">Starter ($0)</option>
                             <option value="PRO">Pro ($49)</option>
@@ -475,7 +475,7 @@ const handleAssignPlan = async (targetUserId: string, selectedPlan: string) => {
                         <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border ${
                           u.is_active
                             ? 'bg-green-950/40 border-green-500/20 text-green-400'
-                            : 'bg-red-950/40 border-red-500/20 text-red-400'
+                            : 'bg-blue-950/40 border-blue-500/20 text-blue-400'
                         }`}>
                           {u.is_active ? 'Active' : 'Suspended'}
                         </span>
@@ -486,7 +486,7 @@ const handleAssignPlan = async (targetUserId: string, selectedPlan: string) => {
                             onClick={() => handleSuspendUser(u.id, u.is_active ? 'suspend' : 'activate')}
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-all duration-300 ${
                               u.is_active
-                                ? 'bg-red-950 hover:bg-red-900 border border-red-500/20 hover:border-red-500/40 text-red-400'
+                                ? 'bg-blue-950 hover:bg-blue-900 border border-blue-500/20 hover:border-blue-500/40 text-blue-400'
                                 : 'bg-green-950 hover:bg-green-900 border border-green-500/20 hover:border-green-500/40 text-green-400'
                             }`}
                           >

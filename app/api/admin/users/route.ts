@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
 
     let query = supabaseAdmin
       .from("users")
-      .select("id, name, email, role, is_active, last_login, created_by, created_at, plan, subscription_status, monthly_calls_limit, monthly_calls_used, vapi_phone_number, billing_cycle_end, wallet_balance")
+      .select("id, name, email, role, is_active, last_login, created_by, created_at, plan, subscription_status, monthly_calls_limit, monthly_calls_used, vapi_phone_number, billing_cycle_end")
       .order("created_at", { ascending: false });
 
     // Super admins can see all users; admins only see their sub-users

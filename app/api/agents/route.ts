@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import { supabase } from "@/lib/supabase";
 import { getVapiClientForAdmin, getLanguageCode } from "@/lib/vapi";
-import { encrypt } from "@/lib/encrypt";
+import { compileFlowToPrompt } from "@/lib/flow-compiler";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-this-in-production";
 
@@ -36,6 +36,13 @@ export async function GET(request: NextRequest) {
     query = query.eq("admin_id", adminId!);
   }
 
+  // Filter by type if requested
+  const { searchParams } = new URL(request.url);
+  const type = searchParams.get("type");
+  if (type && ["VOICE", "CHAT", "BOTH"].includes(type)) {
+    query = query.eq("type", type);
+  }
+
   const { data: agents, error } = await query;
   if (error) return NextResponse.json({ error: "Failed to fetch agents" }, { status: 500 });
 
@@ -43,7 +50,7 @@ export async function GET(request: NextRequest) {
 }
 
 // ─────────────────────────────────────────────
-// POST /api/agents — create agent (+ VAPI sync)
+// POST /api/agents — create agent (+ VAPI sync for voice agents)
 // ─────────────────────────────────────────────
 export async function POST(request: NextRequest) {
   const decoded = getAuth(request);
@@ -51,15 +58,28 @@ export async function POST(request: NextRequest) {
   if (decoded.role !== "ADMIN") return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
 
   const body = await request.json();
-  const { name, language, voice_model, system_prompt, flow_builder, tone } = body;
+  const {
+    name, language, voice_model, system_prompt, flow_builder, tone,
+    type = "VOICE", template_id, call_flow, chat_config,
+  } = body;
 
-  if (!name || !language || !voice_model || !system_prompt) {
-    return NextResponse.json({ error: "Please provide all required fields" }, { status: 400 });
+  if (!name || !language || !system_prompt) {
+    return NextResponse.json({ error: "Please provide name, language, and system_prompt" }, { status: 400 });
+  }
+
+  // Voice agents need a voice_model
+  if ((type === "VOICE" || type === "BOTH") && !voice_model) {
+    return NextResponse.json({ error: "Voice agents require a voice_model" }, { status: 400 });
   }
 
   const validLanguages = ["HINDI", "ENGLISH", "HINGLISH"];
   if (!validLanguages.includes(language)) {
     return NextResponse.json({ error: "Invalid language. Must be HINDI, ENGLISH, or HINGLISH" }, { status: 400 });
+  }
+
+  const validTypes = ["VOICE", "CHAT", "BOTH"];
+  if (!validTypes.includes(type)) {
+    return NextResponse.json({ error: "Invalid type. Must be VOICE, CHAT, or BOTH" }, { status: 400 });
   }
 
   const adminId = decoded.userId!;
@@ -74,17 +94,23 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: `Agent limit reached for ${admin.plan} plan (max ${maxAgents})` }, { status: 403 });
   }
 
-  // Try to create real VAPI agent
+  // Compile flow prompt if provided
+  let finalPrompt = system_prompt;
+  if (call_flow && call_flow.nodes && call_flow.nodes.length > 0) {
+    finalPrompt = compileFlowToPrompt(call_flow, system_prompt);
+  }
+
+  // Try to create real VAPI agent (only for VOICE or BOTH types)
   let vapiAgentId = `placeholder_${Date.now()}`;
   let vapiLinked = false;
 
-  if (admin.vapi_api_key) {
+  if ((type === "VOICE" || type === "BOTH") && admin.vapi_api_key) {
     try {
       const vapiClient = await getVapiClientForAdmin(adminId);
       const langCode = getLanguageCode(language);
       const vapiAgent = await vapiClient.createAgent({
         name,
-        systemPrompt: system_prompt,
+        systemPrompt: finalPrompt,
         voiceId: voice_model,
         language: langCode,
       });
@@ -95,6 +121,9 @@ export async function POST(request: NextRequest) {
     } catch (err) {
       console.error("VAPI agent creation failed (will use placeholder):", err);
     }
+  } else if (type === "CHAT") {
+    // Chat-only agents don't need VAPI
+    vapiAgentId = `chat_${Date.now()}`;
   }
 
   // Save to DB
@@ -103,17 +132,28 @@ export async function POST(request: NextRequest) {
     .insert({
       name,
       language,
-      voice_model,
+      voice_model: voice_model || "none",
       system_prompt,
       flow_builder: flow_builder || { blocks: [] },
       tone: tone || "friendly",
+      type,
+      template_id: template_id || null,
+      call_flow: call_flow || { nodes: [], edges: [] },
+      chat_config: chat_config || {
+        welcome_message: "Hello! How can I help you?",
+        theme_color: "#6366f1",
+        position: "bottom-right",
+      },
       admin_id: adminId,
       vapi_agent_id: vapiAgentId,
     })
     .select("*")
     .single();
 
-  if (error) return NextResponse.json({ error: "Failed to create agent" }, { status: 500 });
+  if (error) {
+    console.error("Failed to create agent:", error);
+    return NextResponse.json({ error: "Failed to create agent" }, { status: 500 });
+  }
 
   return NextResponse.json(
     { message: "Agent created successfully", agent: { ...agent, vapi_linked: vapiLinked } },

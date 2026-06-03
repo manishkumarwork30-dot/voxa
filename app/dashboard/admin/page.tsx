@@ -57,9 +57,12 @@ export default function AdminDashboard() {
   const [leads, setLeads] = useState<Lead[]>([])
   const [subUsers, setSubUsers] = useState<SubUser[]>([])
   const [phoneNumbers, setPhoneNumbers] = useState<any[]>([])
+  const [templates, setTemplates] = useState<any[]>([])
+  const [chatConversations, setChatConversations] = useState<any[]>([])
+  const [agentTypeFilter, setAgentTypeFilter] = useState('ALL')
 
   // Create forms
-  const [newAgent, setNewAgent] = useState({ name: '', language: 'HINDI', voice_model: 'sarah', system_prompt: '', tone: 'friendly' })
+  const [newAgent, setNewAgent] = useState({ name: '', language: 'HINDI', voice_model: 'sarah', system_prompt: '', tone: 'friendly', type: 'VOICE', template_id: '' })
   const [newCampaign, setNewCampaign] = useState({ name: '', agent_id: '', type: 'OUTBOUND', contactsRaw: '', delay: '30' })
   const [newSubUser, setNewSubUser] = useState({ name: '', email: '', password: '' })
   const [vapiConfig, setVapiConfig] = useState({ vapi_api_key: '', vapi_phone_number: '' })
@@ -91,6 +94,22 @@ export default function AdminDashboard() {
   const [successMsg, setSuccessMsg] = useState('')
   const router = useRouter()
 
+  // Agent editing & Flow builder states
+  const [editingAgent, setEditingAgent] = useState<any | null>(null)
+  const [editModalTab, setEditModalTab] = useState<'general' | 'flow' | 'chat'>('general')
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+  const [embedAgentId, setEmbedAgentId] = useState('')
+  const [editAgentForm, setEditAgentForm] = useState({
+    name: '',
+    language: 'HINDI',
+    voice_model: 'sarah',
+    system_prompt: '',
+    tone: 'friendly',
+    type: 'VOICE',
+    call_flow: { nodes: [] as any[], edges: [] as any[] },
+    chat_config: { welcome_message: 'Hello!', theme_color: '#6366f1', position: 'bottom-right' }
+  })
+
   // ─── Fetch all data ───────────────────────────────
   const fetchData = useCallback(async (token: string) => {
     try {
@@ -120,6 +139,17 @@ export default function AdminDashboard() {
       if (callsRes.ok) setCalls(callsData.calls || [])
       if (leadsRes.ok) setLeads(leadsData.leads || [])
       if (subUsersRes.ok) setSubUsers(subData.users?.filter((u: any) => u.id !== storedUser.id) || [])
+
+      // Fetch templates and chat conversations
+      try {
+        const [templatesRes, chatRes] = await Promise.all([
+          fetch('/api/agent-templates', { headers: { Authorization: `Bearer ${token}` } }),
+          fetch('/api/chat/conversations', { headers: { Authorization: `Bearer ${token}` } }),
+        ])
+        const [templatesData, chatData] = await Promise.all([templatesRes.json(), chatRes.json()])
+        if (templatesRes.ok) setTemplates(templatesData.templates || [])
+        if (chatRes.ok) setChatConversations(chatData.conversations || [])
+      } catch (e) { console.error('Secondary fetch error:', e) }
     } catch (err) { console.error('fetchData error:', err) }
   }, [])
 
@@ -155,8 +185,8 @@ export default function AdminDashboard() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      showMsg(`Agent "${newAgent.name}" created! ${data.agent?.vapi_linked ? '✅ Synced to VAPI' : '⚠️ No VAPI key set'}`, 'success')
-      setNewAgent({ name: '', language: 'HINDI', voice_model: 'sarah', system_prompt: '', tone: 'friendly' })
+      showMsg(`Agent "${newAgent.name}" created! ${data.agent?.vapi_linked ? '✅ Synced to VAPI' : newAgent.type === 'CHAT' ? '💬 Chat Agent Ready' : '⚠️ No VAPI key set'}`, 'success')
+      setNewAgent({ name: '', language: 'HINDI', voice_model: 'sarah', system_prompt: '', tone: 'friendly', type: 'VOICE', template_id: '' })
       setShowCreateAgent(false)
       fetchData(token())
     } catch (err: any) { showMsg(err.message, 'error') }
@@ -237,6 +267,124 @@ export default function AdminDashboard() {
       showMsg('Agent deleted', 'success')
       fetchData(token())
     } catch (err: any) { showMsg(err.message, 'error') }
+  }
+
+  // ─── Edit / Configure Agent ────────────────────────
+  const handleEditAgentClick = (agent: any) => {
+    setEditingAgent(agent)
+    setEditAgentForm({
+      name: agent.name,
+      language: agent.language,
+      voice_model: agent.voice_model || 'sarah',
+      system_prompt: agent.system_prompt || '',
+      tone: agent.tone || 'friendly',
+      type: agent.type || 'VOICE',
+      call_flow: agent.call_flow || { nodes: [], edges: [] },
+      chat_config: agent.chat_config || { welcome_message: 'Hello!', theme_color: '#6366f1', position: 'bottom-right' }
+    })
+    setEditModalTab('general')
+    setSelectedNodeId(agent.call_flow?.nodes?.[0]?.id || null)
+  }
+
+  const handleUpdateAgent = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingAgent) return
+    try {
+      const errors = validateFlowLocal(editAgentForm.call_flow)
+      if (editAgentForm.type !== 'CHAT' && editAgentForm.call_flow?.nodes?.length > 0 && errors.length > 0) {
+        if (!confirm(`Flow Validation Warning: ${errors.join(', ')}. Do you still want to save?`)) {
+          return
+        }
+      }
+      const res = await fetch(`/api/agents/${editingAgent.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` },
+        body: JSON.stringify(editAgentForm)
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      showMsg(`Agent "${editAgentForm.name}" updated successfully!`, 'success')
+      setEditingAgent(null)
+      fetchData(token())
+    } catch (err: any) {
+      showMsg(err.message, 'error')
+    }
+  }
+
+  // ─── Flow Builder Helpers ─────────────────────────
+  const addFlowNode = () => {
+    const newId = `node_${Date.now().toString().slice(-4)}`
+    const newNode = {
+      id: newId,
+      type: 'question' as const,
+      message: 'Enter prompt/question text here...',
+      nextNodeId: ''
+    }
+    setEditAgentForm(prev => ({
+      ...prev,
+      call_flow: {
+        ...prev.call_flow,
+        nodes: [...prev.call_flow.nodes, newNode]
+      }
+    }))
+    setSelectedNodeId(newId)
+  }
+
+  const updateFlowNode = (index: number, updatedFields: any) => {
+    setEditAgentForm(prev => {
+      const nodes = [...prev.call_flow.nodes]
+      nodes[index] = { ...nodes[index], ...updatedFields }
+      return {
+        ...prev,
+        call_flow: { ...prev.call_flow, nodes }
+      }
+    })
+  }
+
+  const deleteFlowNode = (index: number) => {
+    setEditAgentForm(prev => {
+      const nodes = prev.call_flow.nodes.filter((_, i) => i !== index)
+      return {
+        ...prev,
+        call_flow: { ...prev.call_flow, nodes }
+      }
+    })
+  }
+
+  const validateFlowLocal = (flow: any) => {
+    if (!flow || !flow.nodes) return ['Flow must have nodes']
+    if (flow.nodes.length === 0) return []
+    const ids = new Set(flow.nodes.map((n: any) => n.id))
+    const errors: string[] = []
+    
+    for (const node of flow.nodes) {
+      if (!node.id) errors.push('Every step must have an ID')
+      if (!node.message) errors.push(`Step "${node.id || 'unnamed'}" is missing instructions/message`)
+    }
+    
+    for (const node of flow.nodes) {
+      if (node.type !== 'branch' && node.type !== 'transfer' && node.type !== 'closing') {
+        if (node.nextNodeId && !ids.has(node.nextNodeId)) {
+          errors.push(`Step "${node.id}" references non-existent step "${node.nextNodeId}"`)
+        }
+      }
+      if (node.type === 'branch') {
+        if (!node.options || node.options.length < 2) {
+          errors.push(`Branch step "${node.id}" must have at least 2 options`)
+        } else {
+          for (const opt of node.options) {
+            if (!opt.nextNodeId || !ids.has(opt.nextNodeId)) {
+              errors.push(`Branch step "${node.id}", option "${opt.label}" goes to non-existent step`)
+            }
+          }
+        }
+      }
+    }
+    
+    const hasGreeting = flow.nodes.some((n: any) => n.type === 'greeting')
+    if (!hasGreeting) errors.push('Flow should have at least one greeting node as starting point')
+    
+    return errors
   }
 
   // ─── Lead Status ──────────────────────────────────
@@ -596,45 +744,96 @@ export default function AdminDashboard() {
                   <h2 className="text-2xl font-bold text-white">Assistants</h2>
                   <p className="text-sm text-gray-400 mt-0.5">{agents.length} agent{agents.length !== 1 ? 's' : ''} configured</p>
                 </div>
-                <button onClick={() => setShowCreateAgent(true)} className="bg-white text-black font-bold text-sm px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">+ Create Assistant</button>
+                <div className="flex items-center gap-3">
+                  <div className="flex bg-[#111113] border border-white/5 rounded-lg overflow-hidden">
+                    {['ALL', 'VOICE', 'CHAT', 'BOTH'].map(t => (
+                      <button key={t} type="button" onClick={() => setAgentTypeFilter(t)}
+                        className={`px-3 py-1.5 text-xs font-bold transition-colors ${agentTypeFilter === t ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white'}`}>
+                        {t === 'ALL' ? 'All' : t === 'VOICE' ? '🎙️ Voice' : t === 'CHAT' ? '💬 Chat' : '🔄 Both'}
+                      </button>
+                    ))}
+                  </div>
+                  <button onClick={() => setShowCreateAgent(true)} className="bg-white text-black font-bold text-sm px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors">+ Create Assistant</button>
+                </div>
               </div>
 
               {/* Create Agent Modal */}
               {showCreateAgent && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-                  <div className="bg-[#111113] border border-white/10 rounded-2xl w-full max-w-lg p-6 space-y-4">
-                    <div className="flex justify-between items-center">
-                      <h3 className="text-white font-bold text-lg">Create New Assistant</h3>
-                      <button onClick={() => setShowCreateAgent(false)} className="text-gray-500 hover:text-white">✕</button>
-                    </div>
-                    <form onSubmit={handleCreateAgent} className="space-y-4">
-                      <div><label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Agent Name</label>
-                        <input type="text" required value={newAgent.name} onChange={e => setNewAgent({ ...newAgent, name: e.target.value })}
-                          className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500" placeholder="Sales Bot" /></div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div><label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Language</label>
-                          <select value={newAgent.language} onChange={e => setNewAgent({ ...newAgent, language: e.target.value })}
-                            className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500">
-                            <option value="HINDI">Hindi</option><option value="ENGLISH">English</option><option value="HINGLISH">Hinglish</option>
-                          </select></div>
-                        <div><label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Voice (ElevenLabs ID)</label>
-                          <input type="text" value={newAgent.voice_model} onChange={e => setNewAgent({ ...newAgent, voice_model: e.target.value })}
-                            className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500" placeholder="sarah" /></div>
-                      </div>
-                      <div><label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Tone</label>
-                        <select value={newAgent.tone} onChange={e => setNewAgent({ ...newAgent, tone: e.target.value })}
-                          className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500">
-                          <option value="friendly">Friendly</option><option value="formal">Formal</option><option value="casual">Casual</option>
-                        </select></div>
-                      <div><label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">System Prompt / Instructions</label>
-                        <textarea rows={4} required value={newAgent.system_prompt} onChange={e => setNewAgent({ ...newAgent, system_prompt: e.target.value })}
-                          className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500 resize-none"
-                          placeholder="You are a helpful sales agent. Ask the customer if they are interested in our product and capture their details..." /></div>
-                      <div className="flex gap-3 pt-2">
-                        <button type="button" onClick={() => setShowCreateAgent(false)} className="flex-1 py-2.5 text-sm font-bold border border-white/10 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors">Cancel</button>
-                        <button type="submit" className="flex-1 py-2.5 text-sm font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors">Create Agent</button>
-                      </div>
-                    </form>
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto">
+                  <div className="bg-[#111113] border border-white/10 rounded-2xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+                     <div className="flex justify-between items-center">
+                       <h3 className="text-white font-bold text-lg">Create New Assistant</h3>
+                       <button onClick={() => setShowCreateAgent(false)} className="text-gray-500 hover:text-white">✕</button>
+                     </div>
+                     <form onSubmit={handleCreateAgent} className="space-y-4">
+                       {/* Template Picker */}
+                       {templates.length > 0 && (
+                         <div>
+                           <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Start from Template (Optional)</label>
+                           <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto bg-black/30 border border-white/5 rounded-lg p-2">
+                             {templates.map((t: any) => (
+                               <button key={t.id} type="button" onClick={() => {
+                                 setNewAgent({
+                                   ...newAgent,
+                                   name: t.name,
+                                   system_prompt: t.default_prompt,
+                                   language: t.default_language,
+                                   voice_model: t.default_voice || 'sarah',
+                                   tone: t.default_tone || 'friendly',
+                                   type: t.type,
+                                   template_id: t.id,
+                                 })
+                               }}
+                                 className={`text-left p-2 rounded-lg border text-xs transition-colors ${
+                                   newAgent.template_id === t.id ? 'border-indigo-500 bg-indigo-500/10 text-white' : 'border-white/10 text-gray-400 hover:border-white/20'
+                                 }`}>
+                                 <span className="mr-1">{t.type === 'VOICE' ? '🎙️' : t.type === 'CHAT' ? '💬' : '🔄'}</span>
+                                 {t.name}
+                               </button>
+                             ))}
+                           </div>
+                         </div>
+                       )}
+
+                       <div><label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Agent Name</label>
+                         <input type="text" required value={newAgent.name} onChange={e => setNewAgent({ ...newAgent, name: e.target.value })}
+                           className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500" placeholder="Sales Bot" /></div>
+                       
+                       <div className="grid grid-cols-3 gap-4">
+                         <div>
+                           <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Type</label>
+                           <select value={newAgent.type} onChange={e => setNewAgent({ ...newAgent, type: e.target.value })}
+                             className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500">
+                             <option value="VOICE">🎙️ Voice</option>
+                             <option value="CHAT">💬 Chat</option>
+                             <option value="BOTH">🔄 Both</option>
+                           </select>
+                         </div>
+                         <div><label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Language</label>
+                           <select value={newAgent.language} onChange={e => setNewAgent({ ...newAgent, language: e.target.value })}
+                             className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500">
+                             <option value="HINDI">Hindi</option><option value="ENGLISH">English</option><option value="HINGLISH">Hinglish</option>
+                           </select></div>
+                         <div><label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Voice ID</label>
+                           <input type="text" value={newAgent.voice_model} onChange={e => setNewAgent({ ...newAgent, voice_model: e.target.value })}
+                             className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500" placeholder="sarah"
+                             disabled={newAgent.type === 'CHAT'} /></div>
+                       </div>
+
+                       <div><label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Tone</label>
+                         <select value={newAgent.tone} onChange={e => setNewAgent({ ...newAgent, tone: e.target.value })}
+                           className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500">
+                           <option value="friendly">Friendly</option><option value="formal">Formal</option><option value="casual">Casual</option>
+                         </select></div>
+                       <div><label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">System Prompt / Instructions</label>
+                         <textarea rows={4} required value={newAgent.system_prompt} onChange={e => setNewAgent({ ...newAgent, system_prompt: e.target.value })}
+                           className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500 resize-none"
+                           placeholder="Instructions defining character, persona, guidelines..." /></div>
+                       <div className="flex gap-3 pt-2">
+                         <button type="button" onClick={() => setShowCreateAgent(false)} className="flex-1 py-2.5 text-sm font-bold border border-white/10 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors">Cancel</button>
+                         <button type="submit" className="flex-1 py-2.5 text-sm font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors">Create Agent</button>
+                       </div>
+                     </form>
                   </div>
                 </div>
               )}
@@ -652,11 +851,13 @@ export default function AdminDashboard() {
                       <tr><th className="py-3 px-4">Agent</th><th className="py-3 px-4">Language</th><th className="py-3 px-4">VAPI Status</th><th className="py-3 px-4">Status</th><th className="py-3 px-4 text-right">Actions</th></tr>
                     </thead>
                     <tbody className="divide-y divide-white/5">
-                      {agents.map(agent => (
+                      {agents.filter(a => agentTypeFilter === 'ALL' || (a as any).type === agentTypeFilter).map(agent => (
                         <tr key={agent.id} className="hover:bg-white/5 transition-colors group">
                           <td className="py-3 px-4">
                             <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs">{agent.name.charAt(0)}</div>
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs">
+                                {(agent as any).type === 'VOICE' ? '🎙️' : (agent as any).type === 'CHAT' ? '💬' : (agent as any).type === 'BOTH' ? '🔄' : agent.name.charAt(0)}
+                              </div>
                               <div>
                                 <p className="text-white font-bold">{agent.name}</p>
                                 <p className="text-xs text-gray-500 truncate max-w-[200px]">{agent.system_prompt.slice(0, 60)}...</p>
@@ -675,6 +876,7 @@ export default function AdminDashboard() {
                           </td>
                           <td className="py-3 px-4 text-right">
                             <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button onClick={() => handleEditAgentClick(agent)} className="text-indigo-400 hover:text-indigo-300 text-xs font-bold mr-2">Edit / Config</button>
                               <button onClick={() => handleDeleteAgent(agent.id, agent.name)} className="text-red-400 hover:text-red-300 text-xs font-bold">Delete</button>
                             </div>
                           </td>
@@ -683,6 +885,181 @@ export default function AdminDashboard() {
                     </tbody>
                   </table>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* ════════════════════════════════════
+              TAB: AGENT MARKETPLACE
+          ════════════════════════════════════ */}
+          {activeTab === 'marketplace' && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <div>
+                <h2 className="text-2xl font-bold text-white">Agent Marketplace</h2>
+                <p className="text-sm text-gray-400 mt-0.5">Explore pre-configured agent templates designed for specific workflows</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {templates.map((temp: any) => (
+                  <div key={temp.id} className="bg-[#111113] border border-white/5 hover:border-indigo-500/30 rounded-xl p-5 flex flex-col justify-between transition-all group relative overflow-hidden">
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-start">
+                        <span className="text-[10px] font-bold text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2 py-0.5 rounded uppercase">
+                          {temp.category || 'General'}
+                        </span>
+                        <span className="text-xs font-bold text-gray-400">
+                          {temp.type === 'VOICE' ? '🎙️ Voice' : temp.type === 'CHAT' ? '💬 Chat' : '🔄 Both'}
+                        </span>
+                      </div>
+                      <div>
+                        <h4 className="text-white font-bold text-lg group-hover:text-indigo-400 transition-colors">{temp.name}</h4>
+                        <p className="text-xs text-gray-400 mt-2 line-clamp-3 leading-relaxed">{temp.description || 'No description provided.'}</p>
+                      </div>
+                    </div>
+                    <div className="pt-5 flex items-center justify-between border-t border-white/5 mt-4">
+                      <span className="text-xs text-gray-500">{temp.default_language} · {temp.default_tone}</span>
+                      <button onClick={() => {
+                        setNewAgent({
+                          name: temp.name,
+                          language: temp.default_language || 'HINDI',
+                          voice_model: temp.default_voice || 'sarah',
+                          system_prompt: temp.default_prompt || '',
+                          tone: temp.default_tone || 'friendly',
+                          type: temp.type || 'VOICE',
+                          template_id: temp.id
+                        })
+                        setShowCreateAgent(true)
+                      }} className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors">
+                        Use Template
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {templates.length === 0 && (
+                  <div className="col-span-full text-center py-12 bg-[#111113] border border-white/5 rounded-xl">
+                    <p className="text-gray-500 text-sm">No templates available in the marketplace yet.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ════════════════════════════════════
+              TAB: CHAT WIDGET
+          ════════════════════════════════════ */}
+          {activeTab === 'chat-widget' && (
+            <div className="space-y-6 animate-in fade-in duration-300">
+              <div>
+                <h2 className="text-2xl font-bold text-white">Chat Widget Management</h2>
+                <p className="text-sm text-gray-400 mt-0.5">Embed chat assistants on your website and manage live visitor conversations</p>
+              </div>
+
+              {/* Embed Code Generator */}
+              <div className="bg-[#111113] border border-white/5 rounded-xl p-5 space-y-4">
+                <h3 className="text-white font-bold">Embed Code Generator</h3>
+                <p className="text-xs text-gray-400">Select a Chat Assistant to get its website embed code.</p>
+                <div className="flex flex-col md:flex-row gap-4">
+                  <select value={embedAgentId} onChange={e => setEmbedAgentId(e.target.value)}
+                    className="bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500 min-w-[200px]">
+                    <option value="">Select Chat Agent...</option>
+                    {agents.filter(a => (a as any).type === 'CHAT' || (a as any).type === 'BOTH').map(a => (
+                      <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
+                  </select>
+                  <div className="flex-1 flex gap-2">
+                    <code className="flex-1 bg-black/60 border border-white/10 rounded-lg px-4 py-2 text-indigo-400 font-mono text-xs select-all overflow-x-auto whitespace-nowrap leading-7">
+                      {embedAgentId
+                        ? `<iframe src="${window.location.origin}/chat/${embedAgentId}" style="width: 400px; height: 600px; border: none; position: fixed; bottom: 20px; right: 20px; z-index: 99999;" title="Chat Assistant"></iframe>`
+                        : 'Select an agent above...'}
+                    </code>
+                    <button onClick={() => {
+                      if (!embedAgentId) { showMsg('Please select a chat agent', 'error'); return }
+                      const code = `<iframe src="${window.location.origin}/chat/${embedAgentId}" style="width: 400px; height: 600px; border: none; position: fixed; bottom: 20px; right: 20px; z-index: 99999;" title="Chat Assistant"></iframe>`
+                      navigator.clipboard.writeText(code)
+                      showMsg('Embed code copied!', 'success')
+                    }} className="px-4 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-lg transition-colors shrink-0">
+                      Copy Code
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Conversations List */}
+              <div className="space-y-4">
+                <h3 className="text-white font-bold text-lg">Conversations</h3>
+                <div className="bg-[#111113] border border-white/5 rounded-xl overflow-hidden divide-y divide-white/5">
+                  {chatConversations.map((conv: any) => (
+                    <div key={conv.id} className="p-4 hover:bg-white/5 transition-all">
+                      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-white font-bold text-sm">{conv.visitor_name || 'Visitor'}</span>
+                            {conv.visitor_email && <span className="text-xs text-gray-500">({conv.visitor_email})</span>}
+                          </div>
+                          <div className="flex items-center gap-3 text-xs text-gray-400 mt-1">
+                            <span>Agent: <strong className="text-indigo-400">{conv.agents?.name || 'Unknown'}</strong></span>
+                            <span>·</span>
+                            <span>Status: 
+                              <span className={`ml-1 px-1.5 py-0.5 rounded text-[10px] font-bold ${conv.status === 'ACTIVE' ? 'bg-green-950/40 border border-green-500/20 text-green-400' : 'bg-white/5 border border-white/10 text-gray-400'}`}>
+                                {conv.status}
+                              </span>
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4 text-xs text-gray-500">
+                          {conv.intent_result?.isLead && (
+                            <span className="bg-green-950/40 border border-green-500/20 text-green-400 px-2 py-0.5 rounded font-bold">🎯 Lead ({Math.round(conv.intent_result.score * 100)}%)</span>
+                          )}
+                          <span>{formatDate(conv.created_at)}</span>
+                          <button onClick={() => setExpandedCall(expandedCall === conv.id ? null : conv.id)} className="text-indigo-400 font-bold hover:underline">
+                            {expandedCall === conv.id ? 'Hide Chat' : 'View Chat'}
+                          </button>
+                        </div>
+                      </div>
+
+                      {expandedCall === conv.id && (
+                        <div className="mt-4 border-t border-white/5 pt-4 space-y-4">
+                          {/* Messages bubbles */}
+                          <div className="space-y-3 max-h-60 overflow-y-auto bg-black/40 rounded-xl p-4 border border-white/5">
+                            {Array.isArray(conv.messages) && conv.messages.map((msg: any, i: number) => (
+                              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`max-w-[70%] rounded-2xl px-4 py-2 text-xs leading-relaxed ${
+                                  msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white/10 text-gray-200 rounded-tl-none'
+                                }`}>
+                                  {msg.content}
+                                </div>
+                              </div>
+                            ))}
+                            {(!Array.isArray(conv.messages) || conv.messages.length === 0) && (
+                              <p className="text-gray-500 text-center py-4 text-xs">No messages in this chat.</p>
+                            )}
+                          </div>
+                          {/* Intent details */}
+                          {conv.intent_result && (
+                            <div className="bg-white/5 rounded-xl p-3 border border-white/5 space-y-2 text-xs">
+                              <span className="text-green-400 font-bold uppercase tracking-wider text-[10px]">Intent Analysis</span>
+                              <p className="text-gray-300"><strong className="text-white">Summary:</strong> {conv.intent_result.summary}</p>
+                              {conv.intent_result.collected_info && (
+                                <div className="flex flex-wrap gap-2 mt-1">
+                                  {Object.entries(conv.intent_result.collected_info).map(([k, v]: any) => (
+                                    <span key={k} className="bg-white/5 border border-white/10 px-2 py-0.5 rounded text-gray-400">
+                                      <strong>{k}:</strong> {String(v)}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {chatConversations.length === 0 && (
+                    <div className="text-center py-12 text-gray-500 text-sm">
+                      No conversations recorded yet. Embed your widget to receive chats!
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
@@ -1208,6 +1585,440 @@ export default function AdminDashboard() {
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Configure/Edit Agent Modal ───────── */}
+      {editingAgent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-[#111113] border border-white/10 rounded-2xl w-full max-w-5xl p-6 flex flex-col h-[90vh] max-h-[850px] shadow-2xl">
+            {/* Header */}
+            <div className="flex justify-between items-center border-b border-white/5 pb-4 shrink-0">
+              <div>
+                <h3 className="text-white font-bold text-lg flex items-center gap-2">
+                  <span>⚙️ Configure Agent:</span>
+                  <span className="text-indigo-400 font-extrabold">{editAgentForm.name}</span>
+                </h3>
+                <p className="text-xs text-gray-400 mt-0.5">Edit prompt instructions, conversation flow, and chat widgets</p>
+              </div>
+              <button type="button" onClick={() => setEditingAgent(null)} className="text-gray-500 hover:text-white text-lg">✕</button>
+            </div>
+
+            {/* Tabs list inside modal */}
+            <div className="flex gap-4 border-b border-white/5 py-2 shrink-0">
+              <button type="button" onClick={() => setEditModalTab('general')}
+                className={`pb-2 text-sm font-bold border-b-2 transition-all ${
+                  editModalTab === 'general' ? 'border-indigo-500 text-white' : 'border-transparent text-gray-400 hover:text-white'
+                }`}>
+                General Settings
+              </button>
+              {(editAgentForm.type === 'VOICE' || editAgentForm.type === 'BOTH') && (
+                <button type="button" onClick={() => setEditModalTab('flow')}
+                  className={`pb-2 text-sm font-bold border-b-2 transition-all ${
+                    editModalTab === 'flow' ? 'border-indigo-500 text-white' : 'border-transparent text-gray-400 hover:text-white'
+                  }`}>
+                  🎙️ Call Flow Builder
+                </button>
+              )}
+              {(editAgentForm.type === 'CHAT' || editAgentForm.type === 'BOTH') && (
+                <button type="button" onClick={() => setEditModalTab('chat')}
+                  className={`pb-2 text-sm font-bold border-b-2 transition-all ${
+                    editModalTab === 'chat' ? 'border-indigo-500 text-white' : 'border-transparent text-gray-400 hover:text-white'
+                  }`}>
+                  💬 Chat Widget Config
+                </button>
+              )}
+            </div>
+
+            {/* Modal Content - Scrollable */}
+            <div className="flex-1 overflow-y-auto py-4 min-h-0">
+              
+              {/* TAB: GENERAL */}
+              {editModalTab === 'general' && (
+                <form onSubmit={handleUpdateAgent} className="space-y-4 max-w-2xl">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Agent Name</label>
+                    <input type="text" required value={editAgentForm.name} onChange={e => setEditAgentForm({ ...editAgentForm, name: e.target.value })}
+                      className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500" />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Language</label>
+                      <select value={editAgentForm.language} onChange={e => setEditAgentForm({ ...editAgentForm, language: e.target.value })}
+                        className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500">
+                        <option value="HINDI">Hindi</option>
+                        <option value="ENGLISH">English</option>
+                        <option value="HINGLISH">Hinglish</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Tone</label>
+                      <select value={editAgentForm.tone} onChange={e => setEditAgentForm({ ...editAgentForm, tone: e.target.value })}
+                        className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500">
+                        <option value="friendly">Friendly</option>
+                        <option value="formal">Formal</option>
+                        <option value="casual">Casual</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Agent Type</label>
+                      <select value={editAgentForm.type} onChange={e => setEditAgentForm({ ...editAgentForm, type: e.target.value })}
+                        className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500">
+                        <option value="VOICE">🎙️ Voice Agent</option>
+                        <option value="CHAT">💬 Chat Agent</option>
+                        <option value="BOTH">🔄 Both (Voice + Chat)</option>
+                      </select>
+                    </div>
+                    {(editAgentForm.type === 'VOICE' || editAgentForm.type === 'BOTH') && (
+                      <div>
+                        <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">ElevenLabs Voice ID</label>
+                        <input type="text" value={editAgentForm.voice_model} onChange={e => setEditAgentForm({ ...editAgentForm, voice_model: e.target.value })}
+                          className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500" placeholder="sarah" />
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">System Prompt / Instructions</label>
+                    <textarea rows={6} required value={editAgentForm.system_prompt} onChange={e => setEditAgentForm({ ...editAgentForm, system_prompt: e.target.value })}
+                      className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500 font-mono resize-none"
+                      placeholder="Instructions defining character, persona, guidelines..." />
+                  </div>
+                  
+                  <div className="flex gap-3 pt-4 border-t border-white/5">
+                    <button type="button" onClick={() => setEditingAgent(null)} className="px-6 py-2.5 text-sm font-bold border border-white/10 rounded-lg text-gray-400 hover:text-white transition-colors">Cancel</button>
+                    <button type="submit" className="px-6 py-2.5 text-sm font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors">Save Details</button>
+                  </div>
+                </form>
+              )}
+
+              {/* TAB: CALL FLOW BUILDER */}
+              {editModalTab === 'flow' && (
+                <div className="flex flex-col h-full min-h-[450px]">
+                  {/* Action Bar */}
+                  <div className="flex justify-between items-center mb-4 shrink-0 bg-white/5 p-3 rounded-lg border border-white/5">
+                    <div className="flex gap-2">
+                      <button type="button" onClick={addFlowNode} className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs px-3 py-2 rounded-lg transition-colors flex items-center gap-1">
+                        <span>➕</span> Add Step/Node
+                      </button>
+                      <button type="button" onClick={() => {
+                        const isHindi = editAgentForm.language === 'HINDI' || editAgentForm.language === 'HINGLISH';
+                        const sample = isHindi ? [
+                          { id: 'greeting', type: 'greeting', message: 'Namaste! Main Vaxo AI se bol raha hoon. Kya aapke paas 2 minute hain?', nextNodeId: 'interest' },
+                          { id: 'interest', type: 'branch', message: 'Humare naye discount offer ke baare mein jaanna chahenge?', options: [{ label: 'Yes', nextNodeId: 'pitch' }, { label: 'No', nextNodeId: 'close_no' }] },
+                          { id: 'pitch', type: 'action', message: 'Pitch details: Hum de rahe hain 50% discount sabhi products par is month.', nextNodeId: 'collect_email' },
+                          { id: 'collect_email', type: 'collect_info', message: 'Apna naam aur email batayein details ke liye.', metadata: { fieldName: 'email' }, nextNodeId: 'close_yes' },
+                          { id: 'close_yes', type: 'closing', message: 'Shukriya! Hum aapko email bhejenge. Alvida!' },
+                          { id: 'close_no', type: 'closing', message: 'Koi baat nahi. Sampark karne ke liye dhanyavaad. Bye!' }
+                        ] : [
+                          { id: 'greeting', type: 'greeting', message: 'Hello! I am calling from Vaxo AI. Do you have 2 minutes?', nextNodeId: 'interest' },
+                          { id: 'interest', type: 'branch', message: 'Would you be interested in our premium plan?', options: [{ label: 'Yes', nextNodeId: 'pitch' }, { label: 'No', nextNodeId: 'close_no' }] },
+                          { id: 'pitch', type: 'action', message: 'Explain: Get unlimited outbound calling agents at just $49/mo.', nextNodeId: 'collect_email' },
+                          { id: 'collect_email', type: 'collect_info', message: 'Great! Could you please tell me your email address?', metadata: { fieldName: 'email' }, nextNodeId: 'close_yes' },
+                          { id: 'close_yes', type: 'closing', message: 'Thanks! We will send details to your email. Bye!' },
+                          { id: 'close_no', type: 'closing', message: 'No problem. Thanks for your time. Goodbye!' }
+                        ];
+                        setEditAgentForm({
+                          ...editAgentForm,
+                          call_flow: { nodes: sample, edges: [] }
+                        });
+                        setSelectedNodeId(sample[0].id);
+                        showMsg('Loaded sample Sales flow!', 'success');
+                      }} className="bg-white/5 hover:bg-white/10 text-white border border-white/10 font-bold text-xs px-3 py-2 rounded-lg transition-colors">
+                        Load Sales Template
+                      </button>
+                    </div>
+                    <button type="button" onClick={() => {
+                      const errors = validateFlowLocal(editAgentForm.call_flow);
+                      if (errors.length > 0) {
+                        showMsg(`Validation Error: ${errors[0]}`, 'error');
+                      } else {
+                        showMsg('Flow is valid! ready to compile.', 'success');
+                      }
+                    }} className="text-xs bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 font-bold px-3 py-2 rounded-lg border border-indigo-500/20 transition-all">
+                      🔍 Validate Flow
+                    </button>
+                  </div>
+
+                  {/* Editor Workspace */}
+                  <div className="flex-1 flex gap-4 min-h-0">
+                    {/* Nodes List Column */}
+                    <div className="w-1/3 bg-black/40 border border-white/5 rounded-xl p-3 flex flex-col h-full overflow-y-auto">
+                      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2 px-1">Flow Steps</span>
+                      <div className="space-y-2 flex-1">
+                        {editAgentForm.call_flow.nodes.map((n: any, index: number) => (
+                          <div key={n.id} onClick={() => setSelectedNodeId(n.id)}
+                            className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                              selectedNodeId === n.id ? 'border-indigo-500 bg-indigo-600/10' : 'border-white/5 hover:border-white/10 bg-[#0d0d0f]'
+                            }`}>
+                            <div className="flex justify-between items-start">
+                              <span className="font-mono text-xs text-indigo-400 font-bold">#{n.id}</span>
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded uppercase bg-white/5 text-gray-400 border border-white/10">
+                                {n.type}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-300 mt-2 truncate">{n.message}</p>
+                          </div>
+                        ))}
+                        {editAgentForm.call_flow.nodes.length === 0 && (
+                          <div className="text-center py-10 text-gray-500 text-xs">
+                            No nodes in the flow. Click "+ Add Step" to begin.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Node Detail/Configuration Column */}
+                    <div className="flex-1 bg-black/20 border border-white/5 rounded-xl p-4 overflow-y-auto">
+                      {selectedNodeId && editAgentForm.call_flow.nodes.find((n: any) => n.id === selectedNodeId) ? (
+                        (() => {
+                          const nodeIndex = editAgentForm.call_flow.nodes.findIndex((n: any) => n.id === selectedNodeId);
+                          const node = editAgentForm.call_flow.nodes[nodeIndex];
+                          return (
+                            <div className="space-y-4">
+                              <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                                <h4 className="text-white font-bold text-sm">Configure Step</h4>
+                                <button type="button" onClick={() => {
+                                  deleteFlowNode(nodeIndex);
+                                  setSelectedNodeId(editAgentForm.call_flow.nodes[0]?.id || null);
+                                }} className="text-red-400 hover:text-red-300 text-xs font-bold">
+                                  🗑️ Delete Step
+                                </button>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                  <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Step Identifier ID</label>
+                                  <input type="text" value={node.id} onChange={e => {
+                                    const newId = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '');
+                                    updateFlowNode(nodeIndex, { id: newId });
+                                    setSelectedNodeId(newId);
+                                  }}
+                                    className="w-full bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-white text-xs outline-none focus:border-indigo-500 font-mono" />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Step Type</label>
+                                  <select value={node.type} onChange={e => updateFlowNode(nodeIndex, { type: e.target.value })}
+                                    className="w-full bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-white text-xs outline-none focus:border-indigo-500">
+                                    <option value="greeting">👋 Greeting (Starting node)</option>
+                                    <option value="question">❓ Ask Question</option>
+                                    <option value="branch">🔀 Decision Branch (Yes/No)</option>
+                                    <option value="collect_info">📥 Collect Info</option>
+                                    <option value="action">⚙️ System Action / Instruction</option>
+                                    <option value="transfer">📞 Call Transfer</option>
+                                    <option value="closing">🛑 Closing / End Call</option>
+                                  </select>
+                                </div>
+                              </div>
+
+                              <div>
+                                <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Prompt Message / Instruction text</label>
+                                <textarea rows={3} value={node.message} onChange={e => updateFlowNode(nodeIndex, { message: e.target.value })}
+                                  className="w-full bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-white text-xs outline-none focus:border-indigo-500 resize-none"
+                                  placeholder="What the AI should say or do at this step..." />
+                              </div>
+
+                              {/* If collect_info node */}
+                              {node.type === 'collect_info' && (
+                                <div>
+                                  <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Field Name to Collect (e.g., email, budget)</label>
+                                  <input type="text" value={node.metadata?.fieldName || ''} onChange={e => updateFlowNode(nodeIndex, { metadata: { ...node.metadata, fieldName: e.target.value } })}
+                                    className="w-full bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-white text-xs outline-none focus:border-indigo-500" placeholder="email" />
+                                </div>
+                              )}
+
+                              {/* If NOT branch, transfer or closing: nextNodeId picker */}
+                              {node.type !== 'branch' && node.type !== 'transfer' && node.type !== 'closing' && (
+                                <div>
+                                  <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Proceed to Next Step</label>
+                                  <select value={node.nextNodeId || ''} onChange={e => updateFlowNode(nodeIndex, { nextNodeId: e.target.value })}
+                                    className="w-full bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-white text-xs outline-none focus:border-indigo-500">
+                                    <option value="">End call/No next step</option>
+                                    {editAgentForm.call_flow.nodes.filter((n: any) => n.id !== node.id).map((n: any) => (
+                                      <option key={n.id} value={n.id}>#{n.id} ({n.type})</option>
+                                    ))}
+                                  </select>
+                                </div>
+                              )}
+
+                              {/* If branch node: options config */}
+                              {node.type === 'branch' && (
+                                <div className="space-y-3">
+                                  <div className="flex justify-between items-center">
+                                    <label className="block text-xs font-bold text-gray-400 uppercase">Decision Branches</label>
+                                    <button type="button" onClick={() => {
+                                      const opts = node.options ? [...node.options] : [];
+                                      opts.push({ label: 'Option Label', nextNodeId: '' });
+                                      updateFlowNode(nodeIndex, { options: opts });
+                                    }} className="text-indigo-400 hover:text-indigo-300 text-[10px] font-bold uppercase">+ Add Branch</button>
+                                  </div>
+                                  <div className="space-y-2">
+                                    {node.options && node.options.map((opt: any, optIdx: number) => (
+                                      <div key={optIdx} className="flex gap-2 items-center bg-black/30 p-2 rounded-lg border border-white/5">
+                                        <input type="text" value={opt.label} placeholder="e.g. Yes / Haan" onChange={e => {
+                                          const opts = [...node.options];
+                                          opts[optIdx] = { ...opts[optIdx], label: e.target.value };
+                                          updateFlowNode(nodeIndex, { options: opts });
+                                        }} className="flex-1 bg-black border border-white/10 rounded px-2 py-1 text-white text-xs outline-none" />
+                                        
+                                        <select value={opt.nextNodeId || ''} onChange={e => {
+                                          const opts = [...node.options];
+                                          opts[optIdx] = { ...opts[optIdx], nextNodeId: e.target.value };
+                                          updateFlowNode(nodeIndex, { options: opts });
+                                        }} className="flex-1 bg-black border border-white/10 rounded px-2 py-1 text-white text-xs outline-none">
+                                          <option value="">Select Target Step...</option>
+                                          {editAgentForm.call_flow.nodes.filter((n: any) => n.id !== node.id).map((n: any) => (
+                                            <option key={n.id} value={n.id}>#{n.id} ({n.type})</option>
+                                          ))}
+                                        </select>
+
+                                        <button type="button" onClick={() => {
+                                          const opts = node.options.filter((_: any, i: number) => i !== optIdx);
+                                          updateFlowNode(nodeIndex, { options: opts });
+                                        }} className="text-red-400 text-xs font-bold font-sans">✕</button>
+                                      </div>
+                                    ))}
+                                    {(!node.options || node.options.length === 0) && (
+                                      <p className="text-gray-500 text-[11px] text-center py-2">Add at least two options (e.g., Yes & No branches)</p>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()
+                      ) : (
+                        <div className="h-full flex flex-col justify-center items-center text-gray-500 text-xs">
+                          Select a step from the left column to configure its properties.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex justify-end gap-3 pt-4 border-t border-white/5 shrink-0 mt-4">
+                    <button type="button" onClick={() => setEditingAgent(null)} className="px-6 py-2.5 text-sm font-bold border border-white/10 rounded-lg text-gray-400 hover:text-white transition-colors">Cancel</button>
+                    <button type="button" onClick={handleUpdateAgent} className="px-6 py-2.5 text-sm font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors">Save Flow Configuration</button>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB: CHAT WIDGET CONFIG */}
+              {editModalTab === 'chat' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 h-full min-h-[450px]">
+                  {/* Config inputs */}
+                  <form onSubmit={handleUpdateAgent} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Welcome Message</label>
+                      <input type="text" value={editAgentForm.chat_config?.welcome_message || ''}
+                        onChange={e => setEditAgentForm({
+                          ...editAgentForm,
+                          chat_config: { ...editAgentForm.chat_config, welcome_message: e.target.value }
+                        })}
+                        className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500" placeholder="Hello! How can I help you today?" />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Widget Theme Color</label>
+                        <div className="flex gap-2">
+                          <input type="color" value={editAgentForm.chat_config?.theme_color || '#6366f1'}
+                            onChange={e => setEditAgentForm({
+                              ...editAgentForm,
+                              chat_config: { ...editAgentForm.chat_config, theme_color: e.target.value }
+                            })}
+                            className="bg-transparent border border-white/10 rounded h-10 w-10 p-0 cursor-pointer shrink-0" />
+                          <input type="text" value={editAgentForm.chat_config?.theme_color || '#6366f1'}
+                            onChange={e => setEditAgentForm({
+                              ...editAgentForm,
+                              chat_config: { ...editAgentForm.chat_config, theme_color: e.target.value }
+                            })}
+                            className="flex-1 bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-white text-xs outline-none focus:border-indigo-500 font-mono" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Widget Position</label>
+                        <select value={editAgentForm.chat_config?.position || 'bottom-right'}
+                          onChange={e => setEditAgentForm({
+                            ...editAgentForm,
+                            chat_config: { ...editAgentForm.chat_config, position: e.target.value }
+                          })}
+                          className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500">
+                          <option value="bottom-right">Bottom Right</option>
+                          <option value="bottom-left">Bottom Left</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Embed code info */}
+                    <div className="bg-black/40 border border-white/5 rounded-xl p-4 space-y-2">
+                      <h4 className="text-white font-bold text-xs">Iframe Embed Code Snippet</h4>
+                      <p className="text-[11px] text-gray-400">Copy this code and paste it inside the HTML body of your website.</p>
+                      <textarea readOnly rows={4}
+                        value={`<iframe src="${window.location.origin}/chat/${editingAgent?.id}" style="width: 400px; height: 600px; border: none; position: fixed; bottom: 20px; ${editAgentForm.chat_config?.position === 'bottom-left' ? 'left: 20px;' : 'right: 20px;'} z-index: 99999;" title="Chat Assistant"></iframe>`}
+                        className="w-full bg-black/60 border border-white/10 rounded-lg px-3 py-2 text-indigo-400 font-mono text-[10px] outline-none select-all resize-none" />
+                      <button type="button" onClick={() => {
+                        const code = `<iframe src="${window.location.origin}/chat/${editingAgent?.id}" style="width: 400px; height: 600px; border: none; position: fixed; bottom: 20px; ${editAgentForm.chat_config?.position === 'bottom-left' ? 'left: 20px;' : 'right: 20px;'} z-index: 99999;" title="Chat Assistant"></iframe>`;
+                        navigator.clipboard.writeText(code);
+                        showMsg('Copied embed code!', 'success');
+                      }} className="text-xs bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 font-bold px-3 py-1.5 rounded hover:bg-indigo-500/20 transition-all w-full">
+                        Copy Snippet
+                      </button>
+                    </div>
+
+                    <div className="flex gap-3 pt-4 border-t border-white/5">
+                      <button type="button" onClick={() => setEditingAgent(null)} className="px-6 py-2.5 text-sm font-bold border border-white/10 rounded-lg text-gray-400 hover:text-white transition-colors">Cancel</button>
+                      <button type="submit" className="px-6 py-2.5 text-sm font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors">Save Chat Config</button>
+                    </div>
+                  </form>
+
+                  {/* Chat Widget Live Preview */}
+                  <div className="bg-black/30 border border-white/5 rounded-2xl p-5 flex flex-col justify-end items-center relative overflow-hidden min-h-[400px]">
+                    <span className="absolute top-4 left-4 text-[10px] font-bold text-gray-500 uppercase tracking-wider bg-white/5 border border-white/10 px-2 py-0.5 rounded">Live Preview</span>
+                    
+                    {/* Chat box container */}
+                    <div className="w-full max-w-[340px] bg-[#0c0c0e] border border-white/10 rounded-2xl flex flex-col h-[350px] shadow-2xl relative">
+                      {/* Header */}
+                      <div className="p-3 flex items-center justify-between border-b border-white/5 rounded-t-2xl text-white font-bold text-xs"
+                        style={{ backgroundColor: editAgentForm.chat_config?.theme_color || '#6366f1' }}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse shrink-0"></div>
+                          <span>{editAgentForm.name} (AI)</span>
+                        </div>
+                        <span className="text-xs opacity-75">✕</span>
+                      </div>
+                      {/* Messages area */}
+                      <div className="flex-1 p-3 overflow-y-auto space-y-3 flex flex-col justify-end">
+                        <div className="flex justify-start">
+                          <div className="bg-white/10 text-gray-200 text-[11px] rounded-2xl rounded-tl-none px-3 py-1.5 max-w-[80%] leading-relaxed">
+                            {editAgentForm.chat_config?.welcome_message || 'Hello! How can I help you today?'}
+                          </div>
+                        </div>
+                        <div className="flex justify-end">
+                          <div className="text-white text-[11px] rounded-2xl rounded-tr-none px-3 py-1.5 max-w-[80%] leading-relaxed"
+                            style={{ backgroundColor: editAgentForm.chat_config?.theme_color || '#6366f1' }}>
+                            Hey! Tell me more about your service.
+                          </div>
+                        </div>
+                      </div>
+                      {/* Input area */}
+                      <div className="p-2 border-t border-white/5 flex gap-2">
+                        <input readOnly type="text" placeholder="Type a message..." className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1 text-[11px] outline-none text-gray-400" />
+                        <button type="button" className="h-6 w-6 rounded-lg flex items-center justify-center text-xs text-white"
+                          style={{ backgroundColor: editAgentForm.chat_config?.theme_color || '#6366f1' }}>
+                          ✈
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
             </div>
           </div>
         </div>

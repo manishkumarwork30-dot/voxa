@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import { supabase } from "@/lib/supabase";
 import { getVapiClientForAdmin, getLanguageCode } from "@/lib/vapi";
+import { compileFlowToPrompt } from "@/lib/flow-compiler";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-this-in-production";
 
@@ -48,9 +49,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (!existingAgent) return NextResponse.json({ error: "Agent not found" }, { status: 404 });
 
   const body = await request.json();
-  const { name, system_prompt, voice_model, language, status, flow_builder, tone } = body;
+  const { name, system_prompt, voice_model, language, status, flow_builder, tone, type, call_flow, chat_config } = body;
 
-  const updates: Record<string, any> = { updated_at: new Date().toISOString() };
+  const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
   if (name) updates.name = name;
   if (system_prompt) updates.system_prompt = system_prompt;
   if (voice_model) updates.voice_model = voice_model;
@@ -58,14 +59,31 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (status) updates.status = status;
   if (flow_builder) updates.flow_builder = flow_builder;
   if (tone) updates.tone = tone;
+  if (type) updates.type = type;
+  if (call_flow) updates.call_flow = call_flow;
+  if (chat_config) updates.chat_config = chat_config;
 
-  // Sync to VAPI if linked
-  if (existingAgent.vapi_agent_id && !existingAgent.vapi_agent_id.startsWith("placeholder_")) {
+  // Compile flow-based prompt for VAPI sync
+  const currentPrompt = system_prompt || existingAgent.system_prompt;
+  let compiledPrompt = currentPrompt;
+  const currentFlow = call_flow || existingAgent.call_flow;
+  if (currentFlow && currentFlow.nodes && currentFlow.nodes.length > 0) {
+    compiledPrompt = compileFlowToPrompt(currentFlow, currentPrompt);
+  }
+
+  // Sync to VAPI if linked (only for VOICE / BOTH agents)
+  const agentType = type || existingAgent.type || "VOICE";
+  if (
+    (agentType === "VOICE" || agentType === "BOTH") &&
+    existingAgent.vapi_agent_id &&
+    !existingAgent.vapi_agent_id.startsWith("placeholder_") &&
+    !existingAgent.vapi_agent_id.startsWith("chat_")
+  ) {
     try {
       const vapiClient = await getVapiClientForAdmin(adminId);
       await vapiClient.updateAgent(existingAgent.vapi_agent_id, {
         name: name || existingAgent.name,
-        systemPrompt: system_prompt || existingAgent.system_prompt,
+        systemPrompt: compiledPrompt,
         voiceId: voice_model || existingAgent.voice_model,
         language: getLanguageCode(language || existingAgent.language),
       });

@@ -32,6 +32,16 @@ export default function SuperAdminDashboard() {
   const [creditAmount, setCreditAmount] = useState('')
   const [selectedUserId, setSelectedUserId] = useState('')
   const [isAssigningCredit, setIsAssigningCredit] = useState(false)
+
+  // Agent Marketplace state
+  const [templates, setTemplates] = useState<any[]>([])
+  const [showCreateTemplate, setShowCreateTemplate] = useState(false)
+  const [editingTemplate, setEditingTemplate] = useState<any>(null)
+  const [newTemplate, setNewTemplate] = useState({
+    name: '', description: '', type: 'VOICE', category: 'GENERAL',
+    default_prompt: '', default_voice: 'sarah', default_language: 'HINDI',
+    default_tone: 'friendly', is_visible: true, is_premium: false,
+  })
 const router = useRouter()
 
   const fetchUsers = useCallback(async (token: string) => {
@@ -46,6 +56,14 @@ const router = useRouter()
     } catch (error) {
       console.error('Error fetching users:', error)
     }
+  }, [])
+
+  const fetchTemplates = useCallback(async (token: string) => {
+    try {
+      const res = await fetch('/api/agent-templates', { headers: { Authorization: `Bearer ${token}` } })
+      const data = await res.json()
+      if (res.ok) setTemplates(data.templates || [])
+    } catch (err) { console.error('Error fetching templates:', err) }
   }, [])
 
   useEffect(() => {
@@ -64,7 +82,9 @@ const router = useRouter()
           return
         }
         setUser(parsedUser)
-        fetchUsers(localStorage.getItem('token') || '')
+        const t = localStorage.getItem('token') || ''
+        fetchUsers(t)
+        fetchTemplates(t)
       } catch (error) {
         console.error('Error parsing user data:', error)
         router.push('/login')
@@ -226,10 +246,55 @@ const handleAssignPlan = async (targetUserId: string, selectedPlan: string) => {
       return acc
     }, 0)
 
+  // ─── Template CRUD ────────────────────────────
+  const handleCreateTemplate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const token = localStorage.getItem('token')
+    try {
+      const res = await fetch('/api/agent-templates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(newTemplate),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setMessage('Template created!'); setMessageType('success')
+      setShowCreateTemplate(false)
+      setNewTemplate({ name: '', description: '', type: 'VOICE', category: 'GENERAL', default_prompt: '', default_voice: 'sarah', default_language: 'HINDI', default_tone: 'friendly', is_visible: true, is_premium: false })
+      fetchTemplates(token!)
+    } catch (err: any) { setMessage(err.message); setMessageType('error') }
+  }
+
+  const handleToggleVisibility = async (templateId: string, currentVisible: boolean) => {
+    const token = localStorage.getItem('token')
+    try {
+      await fetch(`/api/agent-templates/${templateId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ is_visible: !currentVisible }),
+      })
+      fetchTemplates(token!)
+    } catch (err) { console.error(err) }
+  }
+
+  const handleDeleteTemplate = async (templateId: string) => {
+    if (!confirm('Delete this template?')) return
+    const token = localStorage.getItem('token')
+    try {
+      const res = await fetch(`/api/agent-templates/${templateId}`, {
+        method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json()
+      setMessage(data.message); setMessageType('success')
+      fetchTemplates(token!)
+    } catch (err: any) { setMessage(err.message); setMessageType('error') }
+  }
+
   const navSections = [
     {
       label: 'SYSTEM', items: [
         { id: 'saas-controls', icon: 'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z', label: 'SaaS Controls' },
+        { id: 'agent-marketplace', icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10', label: 'Agent Marketplace' },
       ]
     }
   ]
@@ -516,6 +581,145 @@ const handleAssignPlan = async (targetUserId: string, selectedPlan: string) => {
             </div>
           </div>
         </div>
+        )}
+
+        {/* ════════════════════════════════════
+            TAB: AGENT MARKETPLACE
+        ════════════════════════════════════ */}
+        {activeTab === 'agent-marketplace' && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between flex-wrap gap-4">
+              <div>
+                <h3 className="text-2xl font-extrabold text-white mb-1">Agent Marketplace</h3>
+                <p className="text-gray-400 text-sm">Create and manage agent templates that Admins can use to build agents.</p>
+              </div>
+              <button
+                onClick={() => setShowCreateTemplate(!showCreateTemplate)}
+                className="bg-gradient-to-r from-indigo-700 to-indigo-600 hover:from-indigo-600 hover:to-indigo-500 text-white font-bold text-sm px-6 py-3 rounded-lg shadow-md transition-all"
+              >
+                {showCreateTemplate ? 'Cancel' : '+ Create Template'}
+              </button>
+            </div>
+
+            {/* Create Template Form */}
+            {showCreateTemplate && (
+              <form onSubmit={handleCreateTemplate} className="bg-black/40 rounded-xl border border-indigo-500/25 p-6 space-y-4">
+                <h4 className="text-white font-bold text-base">New Agent Template</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Template Name</label>
+                    <input type="text" required value={newTemplate.name} onChange={e => setNewTemplate({...newTemplate, name: e.target.value})}
+                      className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500" placeholder="Sales Outbound Bot" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Description</label>
+                    <input type="text" value={newTemplate.description} onChange={e => setNewTemplate({...newTemplate, description: e.target.value})}
+                      className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500" placeholder="A bot for outbound sales calls" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Type</label>
+                    <select value={newTemplate.type} onChange={e => setNewTemplate({...newTemplate, type: e.target.value})}
+                      className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500">
+                      <option value="VOICE">🎙️ Voice Agent</option>
+                      <option value="CHAT">💬 Chat Agent</option>
+                      <option value="BOTH">🔄 Voice + Chat</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Category</label>
+                    <select value={newTemplate.category} onChange={e => setNewTemplate({...newTemplate, category: e.target.value})}
+                      className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500">
+                      <option value="SALES">Sales</option>
+                      <option value="SUPPORT">Support</option>
+                      <option value="SURVEY">Survey</option>
+                      <option value="COLLECTION">Collection</option>
+                      <option value="GENERAL">General</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Language</label>
+                    <select value={newTemplate.default_language} onChange={e => setNewTemplate({...newTemplate, default_language: e.target.value})}
+                      className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500">
+                      <option value="HINDI">Hindi</option>
+                      <option value="ENGLISH">English</option>
+                      <option value="HINGLISH">Hinglish</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Tone</label>
+                    <select value={newTemplate.default_tone} onChange={e => setNewTemplate({...newTemplate, default_tone: e.target.value})}
+                      className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500">
+                      <option value="friendly">Friendly</option>
+                      <option value="formal">Formal</option>
+                      <option value="casual">Casual</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Default System Prompt</label>
+                  <textarea rows={4} required value={newTemplate.default_prompt} onChange={e => setNewTemplate({...newTemplate, default_prompt: e.target.value})}
+                    className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500 resize-none"
+                    placeholder="You are a helpful sales agent..." />
+                </div>
+                <div className="flex items-center gap-6">
+                  <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                    <input type="checkbox" checked={newTemplate.is_visible} onChange={e => setNewTemplate({...newTemplate, is_visible: e.target.checked})} className="rounded" />
+                    Visible to Admins
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+                    <input type="checkbox" checked={newTemplate.is_premium} onChange={e => setNewTemplate({...newTemplate, is_premium: e.target.checked})} className="rounded" />
+                    Premium Only (PRO/ENTERPRISE)
+                  </label>
+                </div>
+                <button type="submit" className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-6 py-2.5 rounded-lg text-sm">Create Template</button>
+              </form>
+            )}
+
+            {/* Templates Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {templates.map((t: any) => (
+                <div key={t.id} className={`bg-[#111113] border rounded-xl p-5 space-y-3 transition-all hover:border-indigo-500/30 ${
+                  t.is_visible ? 'border-white/5' : 'border-red-500/20 opacity-60'
+                }`}>
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-lg">
+                        {t.type === 'VOICE' ? '🎙️' : t.type === 'CHAT' ? '💬' : '🔄'}
+                      </div>
+                      <div>
+                        <h4 className="text-white font-bold text-sm">{t.name}</h4>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">{t.type}</span>
+                          <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-white/5 text-gray-400 border border-white/10">{t.category}</span>
+                          {t.is_premium && <span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">PRO+</span>}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  {t.description && <p className="text-gray-500 text-xs">{t.description}</p>}
+                  <p className="text-gray-400 text-xs truncate">{t.default_prompt?.slice(0, 80)}...</p>
+                  <div className="flex items-center gap-2 pt-2 border-t border-white/5">
+                    <button onClick={() => handleToggleVisibility(t.id, t.is_visible)}
+                      className={`flex-1 text-xs font-bold py-1.5 rounded-lg border transition-colors ${
+                        t.is_visible
+                          ? 'bg-green-950/40 border-green-500/20 text-green-400 hover:bg-green-950/60'
+                          : 'bg-red-950/40 border-red-500/20 text-red-400 hover:bg-red-950/60'
+                      }`}>
+                      {t.is_visible ? '👁️ Visible' : '🚫 Hidden'}
+                    </button>
+                    <button onClick={() => handleDeleteTemplate(t.id)}
+                      className="text-xs font-bold py-1.5 px-3 rounded-lg border border-red-500/20 text-red-400 hover:bg-red-950/40 transition-colors">Delete</button>
+                  </div>
+                </div>
+              ))}
+              {templates.length === 0 && (
+                <div className="col-span-full text-center py-12">
+                  <p className="text-gray-500 text-sm">No agent templates yet.</p>
+                  <button onClick={() => setShowCreateTemplate(true)} className="mt-3 text-indigo-400 text-sm font-bold hover:text-indigo-300">+ Create your first template</button>
+                </div>
+              )}
+            </div>
+          </div>
         )}
 
         </div>

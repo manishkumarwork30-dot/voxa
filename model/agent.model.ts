@@ -2,6 +2,13 @@
 // TypeScript types for the Supabase `agents` table.
 
 import { supabase } from "@/lib/supabase";
+import type { CallFlow } from "@/lib/flow-compiler";
+
+export interface ChatConfig {
+  welcome_message: string;
+  theme_color: string;
+  position: "bottom-right" | "bottom-left";
+}
 
 export interface AgentRow {
   id: string;
@@ -11,8 +18,15 @@ export interface AgentRow {
   voice_model: string;
   system_prompt: string;
   status: "ACTIVE" | "PAUSED" | "DELETED";
+  type: "VOICE" | "CHAT" | "BOTH";
   admin_id: string;
+  template_id: string | null;
+  call_flow: CallFlow;
+  chat_config: ChatConfig;
+  tone: string;
+  flow_builder: Record<string, unknown>;
   created_at: string;
+  updated_at: string | null;
 }
 
 export type AgentInsert = Omit<AgentRow, "id" | "created_at"> & {

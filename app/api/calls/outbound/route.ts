@@ -113,6 +113,32 @@ export async function POST(request: NextRequest) {
         .update({ monthly_calls_used: (admin.monthly_calls_used || 0) + 1 })
         .eq("id", adminId);
 
+      // Generate simulated transcript from flow if it exists
+      let simulatedTranscript = "";
+      const flow = agent.call_flow;
+      if (flow && Array.isArray(flow.nodes) && flow.nodes.length > 0) {
+        simulatedTranscript = "Simulated Call:\n";
+        flow.nodes.forEach((node: any) => {
+          if (node.type === 'greeting') {
+            simulatedTranscript += `Agent: "${node.message}"\nCustomer: "Hello! Yes, go ahead."\n\n`;
+          } else if (node.type === 'question') {
+            simulatedTranscript += `Agent: "${node.message}"\nCustomer: "Yeah, that makes sense."\n\n`;
+          } else if (node.type === 'branch') {
+            simulatedTranscript += `Agent: "${node.message}"\nCustomer: "Yes, definitely."\n\n`;
+          } else if (node.type === 'collect_info') {
+            simulatedTranscript += `Agent: "${node.message}"\nCustomer: "Sure, my details are John Doe and test@example.com."\n\n`;
+          } else if (node.type === 'action') {
+            simulatedTranscript += `Agent: [Action: ${node.message}]\n\n`;
+          } else if (node.type === 'transfer') {
+            simulatedTranscript += `Agent: "${node.message}"\n[Call transferred to senior executive]\n\n`;
+          } else if (node.type === 'closing') {
+            simulatedTranscript += `Agent: "${node.message}"\n`;
+          }
+        });
+      } else {
+        simulatedTranscript = `Simulated Call: This is a sandbox calling simulation. The voice agent successfully processed the call using system instructions: "${agent.system_prompt}"`;
+      }
+
       // Simulate Sandbox Call
       const { data: callRecord, error: callError } = await supabase
         .from("calls")
@@ -124,7 +150,7 @@ export async function POST(request: NextRequest) {
           caller_number: phoneNumber,
           status: "COMPLETED",
           duration_sec: Math.floor(Math.random() * 90) + 30,
-          transcript: "Simulated Call: This is a sandbox calling simulation. The voice agent successfully processed the lead without active VAPI billing credentials.",
+          transcript: simulatedTranscript,
           cost_usd: 0.0,
         })
         .select("*")

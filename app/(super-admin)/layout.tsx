@@ -18,8 +18,13 @@ export default function SuperAdminLayout({ children }: { children: React.ReactNo
                 Super Admin
               </span>
               <button
-                onClick={() => {
+                onClick={async () => {
                   // Handle logout
+                  try {
+                    await fetch('/api/auth/logout', { method: 'POST' });
+                  } catch (err) {
+                    console.error('Logout error:', err);
+                  }
                   localStorage.removeItem('user');
                   localStorage.removeItem('token');
                   window.location.href = '/login';

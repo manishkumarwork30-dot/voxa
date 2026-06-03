@@ -139,7 +139,12 @@ export default function UserDashboard() {
     return () => clearInterval(interval)
   }, [callActive])
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+    } catch (err) {
+      console.error('Logout error:', err)
+    }
     localStorage.removeItem('user')
     localStorage.removeItem('token')
     router.push('/login')

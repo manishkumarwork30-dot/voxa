@@ -498,7 +498,16 @@ export default function AdminDashboard() {
     setTimeout(() => { setShowRazorpayModal(false); setPaymentSuccess(false); fetchData(token()) }, 2000)
   }
 
-  const handleLogout = () => { localStorage.removeItem('user'); localStorage.removeItem('token'); router.push('/login') }
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+    } catch (err) {
+      console.error('Logout error:', err)
+    }
+    localStorage.removeItem('user')
+    localStorage.removeItem('token')
+    router.push('/login')
+  }
 
   if (isLoading) return (
     <div className="flex min-h-screen items-center justify-center bg-black">

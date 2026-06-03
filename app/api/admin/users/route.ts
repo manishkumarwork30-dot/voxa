@@ -6,20 +6,23 @@ const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-t
 
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    const token = 
+      request.cookies.get("token")?.value ||
+      request.headers.get("authorization")?.replace("Bearer ", "");
+      
+    if (!token) {
       return NextResponse.json(
-        { error: "Authorization header missing or invalid" },
+        { error: "Authorization token missing or invalid" },
         { status: 401 }
       );
     }
-
-    const token = authHeader.replace("Bearer ", "");
     
     let decoded;
     try {
       decoded = jwt.verify(token, JWT_SECRET) as { role?: string; userId?: string };
-    } catch {
+      console.log("DEBUG /api/admin/users: decoded token payload:", decoded);
+    } catch (err: any) {
+      console.error("DEBUG /api/admin/users: JWT verify failed:", err.message);
       return NextResponse.json(
         { error: "Invalid or expired token" },
         { status: 401 }
@@ -28,6 +31,7 @@ export async function GET(request: NextRequest) {
 
     // Check permissions
     if (decoded.role !== "SUPER_ADMIN" && decoded.role !== "ADMIN") {
+      console.warn(`DEBUG /api/admin/users: 403 Forbidden because role is ${decoded.role}`);
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }

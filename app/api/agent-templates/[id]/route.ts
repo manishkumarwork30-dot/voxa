@@ -5,10 +5,12 @@ import { supabase } from "@/lib/supabase";
 const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-this-in-production";
 
 function getAuth(request: NextRequest) {
-  const authHeader = request.headers.get("authorization");
-  if (!authHeader?.startsWith("Bearer ")) return null;
+  const token = 
+    request.cookies.get("token")?.value ||
+    request.headers.get("authorization")?.replace("Bearer ", "");
+  if (!token) return null;
   try {
-    return jwt.verify(authHeader.replace("Bearer ", ""), JWT_SECRET) as {
+    return jwt.verify(token, JWT_SECRET) as {
       role?: string; userId?: string; adminId?: string;
     };
   } catch {

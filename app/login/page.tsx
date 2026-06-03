@@ -57,8 +57,8 @@ export default function LoginPage() {
       if (data.user && data.user.role) {
         const userRole = data.user.role.toUpperCase();
         console.log("Logged in user role is:", userRole);
-        if (userRole === 'SUPER_ADMIN' || userRole === 'ADMIN') {
-          router.push('/dashboard/admin')
+        if (userRole === 'SUPER_ADMIN') {
+          router.push('/dashboard/super-admin')
         } else if (userRole === 'ADMIN') {
           router.push('/dashboard/admin')
         } else {

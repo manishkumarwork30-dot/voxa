@@ -8,15 +8,16 @@ const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-t
 
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    const token = 
+      request.cookies.get("token")?.value ||
+      request.headers.get("authorization")?.replace("Bearer ", "");
+      
+    if (!token) {
       return NextResponse.json(
-        { error: "Authorization header missing or invalid" },
+        { error: "Authorization token missing or invalid" },
         { status: 401 }
       );
     }
-
-    const token = authHeader.replace("Bearer ", "");
     
     let decoded;
     try {

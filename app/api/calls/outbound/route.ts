@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
+import { getTelephonyClientForAdmin } from "@/lib/telephony";
 import { supabase } from "@/lib/supabase";
-import { getVapiClientForAdmin } from "@/lib/vapi";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-this-in-production";
 
@@ -175,14 +175,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Real call logic using VAPI client
-    const vapiClient = await getVapiClientForAdmin(adminId);
+    // Real call logic using unified telephony client resolved for this agent
+    const { getTelephonyClientForAgent } = await import("@/lib/telephony");
+    const { client: telephonyClient, remoteId, provider } = await getTelephonyClientForAgent(adminId, agent.vapi_agent_id);
 
-    const phoneNumberId = admin.vapi_phone_number || "placeholder_phone_number_id";
+    let phoneNumberId = admin.vapi_phone_number || "placeholder_phone_number_id";
+    if (provider === 'RETELL') {
+      phoneNumberId = admin.retell_phone_number || "placeholder_phone_number_id";
+    } else if (provider === 'BLAND_AI') {
+      phoneNumberId = admin.bland_phone_number || "placeholder_phone_number_id";
+    } else if (provider === 'TELNYX') {
+      phoneNumberId = admin.telnyx_phone_number || "placeholder_phone_number_id";
+    }
+
+    if (!phoneNumberId || phoneNumberId === 'placeholder_phone_number_id') {
+      return NextResponse.json({
+        error: `Phone Number ID not configured for ${provider}. Go to Settings → API Keys and add your ${provider} Phone Number ID.`
+      }, { status: 400 });
+    }
+
     
-    const vapiResponse = await vapiClient.makeOutboundCall({
+    const callResponse = await telephonyClient.makeOutboundCall({
       phoneNumber,
-      assistantId: agent.vapi_agent_id,
+      assistantId: remoteId,
       phoneNumberId
     });
 
@@ -196,7 +211,7 @@ export async function POST(request: NextRequest) {
     const { data: callRecord, error: callError } = await supabase
       .from("calls")
       .insert({
-        vapi_call_id: vapiResponse.id || `vapi_${Date.now()}`,
+        vapi_call_id: callResponse.id || `call_${Date.now()}`,
         admin_id: adminId,
         agent_id: agent.id,
         direction: "OUTBOUND",
@@ -220,7 +235,7 @@ export async function POST(request: NextRequest) {
           status: callRecord.status,
           created_at: callRecord.created_at,
         },
-        vapiResponse: vapiResponse,
+        rawResponse: callResponse.rawResponse,
       },
       { status: 201 }
     );

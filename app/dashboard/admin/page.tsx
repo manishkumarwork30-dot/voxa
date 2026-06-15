@@ -39,6 +39,42 @@ interface Lead {
 interface SubUser { id: string; name: string; email: string; role: string; is_active: boolean }
 
 // ─────────────────────────────────────────────
+// Local Fallback / Built-in Templates
+// ─────────────────────────────────────────────
+const LOCAL_TEMPLATES = [
+  {
+    id: 'mobile-tower-hindi',
+    name: 'Mobile Tower Installation (Hindi)',
+    description: 'मोबाइल टावर स्थापना संबंधी अपडेट और सहमति जांच',
+    type: 'VOICE',
+    category: 'GENERAL',
+    default_prompt: `तुम एक ग्राहक संबंध कार्यकारी (Customer Relationship Executive) 'Ms. Meena Kumari' हो। तुम्हारा काम ग्राहक से मोबाइल टावर स्थापना संबंधी विवरणों पर चर्चा करना है।
+हमेशा विनम्र, सम्मानजनक और मददगार रहो। हिंदी में बात करो।
+
+मुख्य बातचीत के मुद्दे:
+1. मोबाइल टावर स्थापना के अवसर में उनकी रुचि के लिए धन्यवाद देना।
+2. उन्हें बताना कि उनका विवरण ऑनलाइन स्थान सर्वेक्षण के लिए सर्वेक्षण टीम को भेज दिया गया है, जिसके आधार पर टावर स्थापना की पुष्टि की जाएगी।
+3. यदि स्थान स्वीकृत हो जाता है, तो निम्नलिखित लाभ समझाना:
+   - अग्रिम भुगतान (Advance): ₹70,00,000/- (स्थापना से पहले)
+   - मासिक किराया: ₹60,000/- (₹30,000/- सीधे खाते में + ₹30,000/- EMI में)
+   - रोजगार: परिवार के एक सदस्य को ₹20,000/- मासिक वेतन पर टावर रखरखाव अनुबंध के तहत नौकरी।
+4. उन्हें सूचित करना कि स्थान की स्वीकृति मिलने के बाद, कल सुबह तक WhatsApp पर PDF स्वीकृति रिपोर्ट मिल जाएगी।
+5. महत्वपूर्ण नोट: स्वीकृति मिलने पर, उन्हें ₹2,550 का एकमुश्त पंजीकरण शुल्क (One-time Registration Fee) देना होगा जिससे बुकिंग की पुष्टि होगी।
+6. उनसे स्पष्ट रूप से पूछना कि क्या वे इन शर्तों से सहमत हैं और आगे बात करना चाहते हैं?
+   - यदि वे "YES" या सहमति देते हैं, तो उनका नाम और पिन कोड (PIN Code) कन्फर्म करो, और बोलो कि हमारे वरिष्ठ अधिकारी उनसे जल्द संपर्क करेंगे। फिर बातचीत समाप्त करो।
+   - यदि वे "NO" या असहमति व्यक्त करते हैं, तो उन्हें धन्यवाद देकर कॉल समाप्त करो।
+
+बहुत महत्वपूर्ण निर्देश:
+- हमेशा विनम्रता से बात करो।
+- ग्राहक के प्रश्नों का उत्तर संक्षिप्त और स्पष्ट रूप से दो।
+- यदि वे सहमत हों (YES), तो बातचीत को सकारात्मक रूप से समाप्त करो।`,
+    default_voice: 'natural_hindi_voice',
+    default_language: 'HINDI',
+    default_tone: 'friendly',
+  }
+];
+
+// ─────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────
 const formatDuration = (sec: number) => `${Math.floor(sec / 60)}m ${sec % 60}s`
@@ -57,7 +93,7 @@ export default function AdminDashboard() {
   const [leads, setLeads] = useState<Lead[]>([])
   const [subUsers, setSubUsers] = useState<SubUser[]>([])
   const [phoneNumbers, setPhoneNumbers] = useState<any[]>([])
-  const [templates, setTemplates] = useState<any[]>([])
+  const [templates, setTemplates] = useState<any[]>(LOCAL_TEMPLATES)
   const [chatConversations, setChatConversations] = useState<any[]>([])
   const [agentTypeFilter, setAgentTypeFilter] = useState('ALL')
 
@@ -65,13 +101,20 @@ export default function AdminDashboard() {
   const [newAgent, setNewAgent] = useState({ name: '', language: 'HINDI', voice_model: 'sarah', system_prompt: '', tone: 'friendly', type: 'VOICE', template_id: '' })
   const [newCampaign, setNewCampaign] = useState({ name: '', agent_id: '', type: 'OUTBOUND', contactsRaw: '', delay: '30' })
   const [newSubUser, setNewSubUser] = useState({ name: '', email: '', password: '' })
-  const [vapiConfig, setVapiConfig] = useState({ vapi_api_key: '', vapi_phone_number: '' })
+  const [providerConfig, setProviderConfig] = useState({ 
+    telephony_provider: 'VAPI',
+    vapi_api_key: '', vapi_phone_number: '',
+    retell_api_key: '', retell_phone_number: '',
+    bland_api_key: '', bland_phone_number: '',
+    telnyx_api_key: '', telnyx_phone_number: ''
+  })
   const [notifSettings, setNotifSettings] = useState({ email: false, sms: false, email_address: '', phone_number: '' })
 
   // UI states
   const [showCreateAgent, setShowCreateAgent] = useState(false)
   const [showCreateCampaign, setShowCreateCampaign] = useState(false)
   const [expandedCall, setExpandedCall] = useState<string | null>(null)
+  const [expandedLiveCall, setExpandedLiveCall] = useState<string | null>(null)
   const [callSearch, setCallSearch] = useState('')
   const [leadFilter, setLeadFilter] = useState('ALL')
   const [testingVapi, setTestingVapi] = useState(false)
@@ -89,6 +132,44 @@ export default function AdminDashboard() {
   const [selectedUpgradePlan, setSelectedUpgradePlan] = useState<'PRO' | 'ENTERPRISE' | null>(null)
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
   const [paymentSuccess, setPaymentSuccess] = useState(false)
+
+  // Bland AI Number Purchasing
+  const [showBuyModal, setShowBuyModal] = useState(false)
+  const [buyAreaCode, setBuyAreaCode] = useState('415')
+  const [buyCountryCode, setBuyCountryCode] = useState('US')
+  const [buyingNumber, setBuyingNumber] = useState(false)
+
+  const handleBuyNumber = async () => {
+    setBuyingNumber(true)
+    try {
+      const res = await fetch('/api/phone-numbers', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token()}`,
+        },
+        body: JSON.stringify({
+          action: 'buy',
+          area_code: buyAreaCode,
+          country_code: buyCountryCode,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Failed to purchase phone number')
+      showMsg(`Successfully purchased phone number: ${data.result?.phone_number || 'success'}`, 'success')
+      setShowBuyModal(false)
+      // Auto-reload active numbers
+      const listRes = await fetch('/api/phone-numbers', { headers: { Authorization: `Bearer ${token()}` } })
+      const listData = await listRes.json()
+      if (listRes.ok) {
+        setPhoneNumbers(listData.phone_numbers || [])
+      }
+    } catch (err: any) {
+      showMsg(err.message, 'error')
+    } finally {
+      setBuyingNumber(false)
+    }
+  }
 
   const [errorMsg, setErrorMsg] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
@@ -110,6 +191,54 @@ export default function AdminDashboard() {
     chat_config: { welcome_message: 'Hello!', theme_color: '#6366f1', position: 'bottom-right' }
   })
 
+  // CSV bulk campaign state
+  const [campaignMode, setCampaignMode] = useState<'STANDARD' | 'CSV'>('STANDARD')
+  const [csvFile, setCsvFile] = useState<File | null>(null)
+  const [csvScript, setCsvScript] = useState('You are a friendly sales agent calling customers about our AI service.\n\nFirst, introduce yourself and the purpose of the call.')
+  const [csvLanguage, setCsvLanguage] = useState<'hi' | 'en'>('hi')
+  const [csvVoiceId, setCsvVoiceId] = useState('sarah')
+  const [isUploadingCSV, setIsUploadingCSV] = useState(false)
+
+  // Live Stats modal state
+  const [activeStatsCampaign, setActiveStatsCampaign] = useState<any | null>(null)
+  const [liveCalls, setLiveCalls] = useState<any[]>([])
+  const [autoRefreshStats, setAutoRefreshStats] = useState(false)
+  const statsTimerRef = useRef<any>(null)
+
+  const fetchLiveCampaignStats = useCallback(async (campId: string, tok: string) => {
+    try {
+      const res = await fetch(`/api/campaigns/${campId}/stats`, {
+        headers: { Authorization: `Bearer ${tok}` }
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setActiveStatsCampaign(data.campaign)
+        setLiveCalls(data.calls || [])
+      }
+    } catch (err) {
+      console.error('Error fetching live stats:', err)
+    }
+  }, [])
+
+  useEffect(() => {
+    const tok = localStorage.getItem('token') || ''
+    if (activeStatsCampaign && autoRefreshStats) {
+      fetchLiveCampaignStats(activeStatsCampaign.id, tok)
+      statsTimerRef.current = setInterval(() => {
+        fetchLiveCampaignStats(activeStatsCampaign.id, tok)
+      }, 5000)
+    } else {
+      if (statsTimerRef.current) {
+        clearInterval(statsTimerRef.current)
+      }
+    }
+    return () => {
+      if (statsTimerRef.current) {
+        clearInterval(statsTimerRef.current)
+      }
+    }
+  }, [activeStatsCampaign, autoRefreshStats, fetchLiveCampaignStats])
+
   // ─── Fetch all data ───────────────────────────────
   const fetchData = useCallback(async (token: string) => {
     try {
@@ -130,7 +259,13 @@ export default function AdminDashboard() {
       const matched = usersData.users?.find((u: any) => u.id === storedUser.id)
       if (matched) {
         setUser(matched)
-        setVapiConfig({ vapi_api_key: matched.vapi_api_key ? '••••••••••••••••' : '', vapi_phone_number: matched.vapi_phone_number || '' })
+        setProviderConfig({ 
+          telephony_provider: matched.telephony_provider || 'VAPI',
+          vapi_api_key: matched.vapi_api_key ? '••••••••••••••••' : '', vapi_phone_number: matched.vapi_phone_number || '',
+          retell_api_key: matched.retell_api_key ? '••••••••••••••••' : '', retell_phone_number: matched.retell_phone_number || '',
+          bland_api_key: matched.bland_api_key ? '••••••••••••••••' : '', bland_phone_number: matched.bland_phone_number || '',
+          telnyx_api_key: matched.telnyx_api_key ? '••••••••••••••••' : '', telnyx_phone_number: matched.telnyx_phone_number || ''
+        })
         setNotifSettings(matched.notification_settings || { email: false, sms: false, email_address: '', phone_number: '' })
       }
 
@@ -147,7 +282,7 @@ export default function AdminDashboard() {
           fetch('/api/chat/conversations', { headers: { Authorization: `Bearer ${token}` } }),
         ])
         const [templatesData, chatData] = await Promise.all([templatesRes.json(), chatRes.json()])
-        if (templatesRes.ok) setTemplates(templatesData.templates || [])
+        if (templatesRes.ok) setTemplates([...LOCAL_TEMPLATES, ...(templatesData.templates || [])])
         if (chatRes.ok) setChatConversations(chatData.conversations || [])
       } catch (e) { console.error('Secondary fetch error:', e) }
     } catch (err) { console.error('fetchData error:', err) }
@@ -212,6 +347,40 @@ export default function AdminDashboard() {
       setShowCreateCampaign(false)
       fetchData(token())
     } catch (err: any) { showMsg(err.message, 'error') }
+  }
+
+  const handleCreateCSVCampaign = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!csvFile) { showMsg('Please select a CSV file', 'error'); return }
+    if (!newCampaign.name) { showMsg('Please enter a campaign name', 'error'); return }
+    setIsUploadingCSV(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', csvFile)
+      formData.append('campaignName', newCampaign.name)
+      formData.append('script', csvScript)
+      formData.append('language', csvLanguage)
+      formData.append('voiceId', csvVoiceId)
+
+      const res = await fetch('/api/campaigns/bulk-upload', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token()}`
+        },
+        body: formData
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      showMsg(`Bulk Campaign "${newCampaign.name}" created successfully with ${data.contactsCount} contacts!`, 'success')
+      setNewCampaign({ name: '', agent_id: '', type: 'OUTBOUND', contactsRaw: '', delay: '30' })
+      setCsvFile(null)
+      setShowCreateCampaign(false)
+      fetchData(token())
+    } catch (err: any) {
+      showMsg(err.message, 'error')
+    } finally {
+      setIsUploadingCSV(false)
+    }
   }
 
   // ─── Campaign Controls ────────────────────────────
@@ -399,14 +568,32 @@ export default function AdminDashboard() {
     } catch (err: any) { showMsg(err.message, 'error') }
   }
 
-  // ─── VAPI Config Save ─────────────────────────────
-  const handleSaveVapiConfig = async (e: React.FormEvent) => {
+  // ─── Provider Config Save ─────────────────────────────
+  const handleSaveProviderConfig = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const body: any = { vapi_phone_number: vapiConfig.vapi_phone_number, notification_settings: notifSettings }
-      if (vapiConfig.vapi_api_key && !vapiConfig.vapi_api_key.includes('•')) {
-        body.vapi_api_key = vapiConfig.vapi_api_key
+      const body: any = { 
+        telephony_provider: providerConfig.telephony_provider,
+        vapi_phone_number: providerConfig.vapi_phone_number,
+        retell_phone_number: providerConfig.retell_phone_number,
+        bland_phone_number: providerConfig.bland_phone_number,
+        telnyx_phone_number: providerConfig.telnyx_phone_number,
+        notification_settings: notifSettings 
       }
+      
+      if (providerConfig.vapi_api_key && !providerConfig.vapi_api_key.includes('•')) {
+        body.vapi_api_key = providerConfig.vapi_api_key
+      }
+      if (providerConfig.retell_api_key && !providerConfig.retell_api_key.includes('•')) {
+        body.retell_api_key = providerConfig.retell_api_key
+      }
+      if (providerConfig.bland_api_key && !providerConfig.bland_api_key.includes('•')) {
+        body.bland_api_key = providerConfig.bland_api_key
+      }
+      if (providerConfig.telnyx_api_key && !providerConfig.telnyx_api_key.includes('•')) {
+        body.telnyx_api_key = providerConfig.telnyx_api_key
+      }
+
       const res = await fetch('/api/admin/profile', {
         method: 'PATCH', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` },
         body: JSON.stringify(body)
@@ -417,16 +604,16 @@ export default function AdminDashboard() {
     } catch (err: any) { showMsg(err.message, 'error') }
   }
 
-  // ─── Test VAPI Key ────────────────────────────────
-  const handleTestVapi = async () => {
-    if (!vapiConfig.vapi_api_key || vapiConfig.vapi_api_key.includes('•')) {
-      showMsg('Enter a new API key to test', 'error'); return
+  // ─── Test Provider Key ────────────────────────────────
+  const handleTestProvider = async (provider: string, apiKey: string) => {
+    if (!apiKey || apiKey.includes('•')) {
+      showMsg(`Enter a new ${provider} API key to test`, 'error'); return
     }
     setTestingVapi(true); setVapiTestResult(null)
     try {
-      const res = await fetch('/api/admin/profile', {
+      const res = await fetch('/api/admin/profile/test-vapi', {
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token()}` },
-        body: JSON.stringify({ vapi_api_key: vapiConfig.vapi_api_key })
+        body: JSON.stringify({ provider, api_key: apiKey })
       })
       const data = await res.json()
       setVapiTestResult(data)
@@ -1081,19 +1268,28 @@ export default function AdminDashboard() {
               <div className="flex justify-between items-center">
                 <div>
                   <h2 className="text-2xl font-bold text-white">Phone Numbers</h2>
-                  <p className="text-sm text-gray-400 mt-0.5">VAPI phone numbers from your account</p>
+                  <p className="text-sm text-gray-400 mt-0.5">
+                    {providerConfig.telephony_provider || 'VAPI'} phone numbers from your account
+                  </p>
                 </div>
-                <button onClick={async () => {
-                  try {
-                    const res = await fetch('/api/phone-numbers', { headers: { Authorization: `Bearer ${token()}` } })
-                    const data = await res.json()
-                    if (!res.ok) throw new Error(data.error)
-                    setPhoneNumbers(data.phone_numbers || [])
-                    showMsg(`Loaded ${data.phone_numbers?.length || 0} phone numbers`, 'success')
-                  } catch (err: any) { showMsg(err.message, 'error') }
-                }} className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm px-4 py-2 rounded-lg transition-colors">
-                  Load Numbers
-                </button>
+                <div className="flex gap-2">
+                  {providerConfig.telephony_provider === 'BLAND_AI' && (
+                    <button onClick={() => setShowBuyModal(true)} className="bg-amber-600 hover:bg-amber-500 text-white font-bold text-sm px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5 shadow-lg shadow-amber-500/10">
+                      <span>🛒</span> Buy Number
+                    </button>
+                  )}
+                  <button onClick={async () => {
+                    try {
+                      const res = await fetch('/api/phone-numbers', { headers: { Authorization: `Bearer ${token()}` } })
+                      const data = await res.json()
+                      if (!res.ok) throw new Error(data.error)
+                      setPhoneNumbers(data.phone_numbers || [])
+                      showMsg(`Loaded ${data.phone_numbers?.length || 0} phone numbers`, 'success')
+                    } catch (err: any) { showMsg(err.message, 'error') }
+                  }} className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm px-4 py-2 rounded-lg transition-colors">
+                    Load Numbers
+                  </button>
+                </div>
               </div>
 
               {phoneNumbers.length === 0 ? (
@@ -1216,35 +1412,136 @@ export default function AdminDashboard() {
                   <div className="bg-[#111113] border border-white/10 rounded-2xl w-full max-w-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
                     <div className="flex justify-between items-center">
                       <h3 className="text-white font-bold text-lg">New Campaign</h3>
-                      <button onClick={() => setShowCreateCampaign(false)} className="text-gray-500 hover:text-white">✕</button>
+                      <button onClick={() => {
+                        setShowCreateCampaign(false)
+                        setCampaignMode('STANDARD')
+                      }} className="text-gray-500 hover:text-white">✕</button>
                     </div>
-                    <form onSubmit={handleCreateCampaign} className="space-y-4">
-                      <div><label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Campaign Name</label>
-                        <input type="text" required value={newCampaign.name} onChange={e => setNewCampaign({ ...newCampaign, name: e.target.value })}
-                          className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500" placeholder="January Sales Drive" /></div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div><label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Agent</label>
-                          <select required value={newCampaign.agent_id} onChange={e => setNewCampaign({ ...newCampaign, agent_id: e.target.value })}
-                            className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500">
-                            <option value="">Select agent...</option>
-                            {agents.filter(a => a.status === 'ACTIVE').map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                          </select></div>
-                        <div><label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Delay Between Calls (sec)</label>
-                          <input type="number" min="5" max="300" value={newCampaign.delay} onChange={e => setNewCampaign({ ...newCampaign, delay: e.target.value })}
-                            className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500" /></div>
-                      </div>
-                      <div><label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Contact List (one per line or comma-separated)</label>
-                        <textarea rows={5} value={newCampaign.contactsRaw} onChange={e => setNewCampaign({ ...newCampaign, contactsRaw: e.target.value })}
-                          className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500 font-mono resize-none"
-                          placeholder="+919876543210&#10;+918765432109&#10;+917654321098" /></div>
-                      <div className="flex gap-3 pt-2">
-                        <button type="button" onClick={() => setShowCreateCampaign(false)} className="flex-1 py-2.5 text-sm font-bold border border-white/10 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors">Cancel</button>
-                        <button type="submit" className="flex-1 py-2.5 text-sm font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors">Create Campaign</button>
-                      </div>
-                    </form>
+
+                    <div className="flex gap-2 p-1 bg-white/5 rounded-lg border border-white/10">
+                      <button type="button" onClick={() => setCampaignMode('STANDARD')} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${campaignMode === 'STANDARD' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white'}`}>Standard (Normal VAPI)</button>
+                      <button type="button" onClick={() => setCampaignMode('CSV')} className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-colors ${campaignMode === 'CSV' ? 'bg-indigo-600 text-white' : 'text-gray-400 hover:text-white'}`}>Bland AI Bulk CSV</button>
+                    </div>
+
+                    {campaignMode === 'STANDARD' ? (
+                      <form onSubmit={handleCreateCampaign} className="space-y-4">
+                        <div><label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Campaign Name</label>
+                          <input type="text" required value={newCampaign.name} onChange={e => setNewCampaign({ ...newCampaign, name: e.target.value })}
+                            className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500" placeholder="January Sales Drive" /></div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div><label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Agent</label>
+                            <select required value={newCampaign.agent_id} onChange={e => setNewCampaign({ ...newCampaign, agent_id: e.target.value })}
+                              className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500">
+                              <option value="">Select agent...</option>
+                              {agents.filter(a => a.status === 'ACTIVE').map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                            </select></div>
+                          <div><label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Delay Between Calls (sec)</label>
+                            <input type="number" min="5" max="300" value={newCampaign.delay} onChange={e => setNewCampaign({ ...newCampaign, delay: e.target.value })}
+                              className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500" /></div>
+                        </div>
+                        <div><label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Contact List (one per line or comma-separated)</label>
+                          <textarea rows={5} value={newCampaign.contactsRaw} onChange={e => setNewCampaign({ ...newCampaign, contactsRaw: e.target.value })}
+                            className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500 font-mono resize-none"
+                            placeholder="+919876543210&#10;+918765432109&#10;+917654321098" /></div>
+                        <div className="flex gap-3 pt-2">
+                          <button type="button" onClick={() => setShowCreateCampaign(false)} className="flex-1 py-2.5 text-sm font-bold border border-white/10 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors">Cancel</button>
+                          <button type="submit" className="flex-1 py-2.5 text-sm font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors">Create Campaign</button>
+                        </div>
+                      </form>
+                    ) : (
+                      <form onSubmit={handleCreateCSVCampaign} className="space-y-4">
+                        <div>
+                          <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Campaign Name</label>
+                          <input type="text" required value={newCampaign.name} onChange={e => setNewCampaign({ ...newCampaign, name: e.target.value })}
+                            className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500" placeholder="Bland Bulk Drive" />
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Language</label>
+                            <select value={csvLanguage} onChange={e => setCsvLanguage(e.target.value as 'hi' | 'en')}
+                              className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500">
+                              <option value="hi">Hindi (हिंदी)</option>
+                              <option value="en">English</option>
+                            </select>
+                          </div>
+                          <div>
+                            <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Voice Model</label>
+                            <select value={csvVoiceId === 'sarah' || csvVoiceId === 'natural' || csvVoiceId === 'natural_hindi_voice' ? csvVoiceId : 'custom'} 
+                              onChange={e => {
+                                const val = e.target.value;
+                                if (val !== 'custom') {
+                                  setCsvVoiceId(val);
+                                } else {
+                                  setCsvVoiceId('');
+                                }
+                              }}
+                              className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500">
+                              <option value="sarah">Sarah (English)</option>
+                              <option value="natural">Natural (English)</option>
+                              <option value="natural_hindi_voice">Natural Hindi Voice</option>
+                              <option value="custom">Custom Voice ID...</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        {!(csvVoiceId === 'sarah' || csvVoiceId === 'natural' || csvVoiceId === 'natural_hindi_voice') && (
+                          <div>
+                            <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Custom Voice ID</label>
+                            <input type="text" required value={csvVoiceId} onChange={e => setCsvVoiceId(e.target.value)}
+                              className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500 font-mono" placeholder="voice_id_from_bland" />
+                          </div>
+                        )}
+
+                        <div>
+                          <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5 font-sans">Bland Agent Script Prompt</label>
+                          <textarea rows={5} required value={csvScript} onChange={e => setCsvScript(e.target.value)}
+                            className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-xs outline-none focus:border-indigo-500 font-sans resize-none"
+                            placeholder="Write branching script logic:&#10;- If YES: collect email...&#10;- If NO: end call..." />
+                          <p className="text-[10px] text-gray-500 mt-1">Provide detailed guidelines. For Hindi agents, instruct them to speak Hindi.</p>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">Upload Contacts (CSV)</label>
+                          <div className="flex items-center justify-center w-full">
+                            <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-white/10 border-dashed rounded-lg cursor-pointer bg-black/20 hover:bg-black/40 transition-colors">
+                              <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                <span className="text-2xl mb-2">📁</span>
+                                <p className="text-xs text-gray-400 font-semibold">{csvFile ? csvFile.name : 'Select or drop CSV file'}</p>
+                                <p className="text-[10px] text-gray-500 mt-1">Format: phone, name, email</p>
+                              </div>
+                              <input type="file" accept=".csv" required className="hidden" onChange={e => {
+                                const f = e.target.files?.[0];
+                                if (f && f.name.endsWith('.csv')) {
+                                  setCsvFile(f);
+                                } else {
+                                  alert('Please select a CSV file');
+                                }
+                              }} />
+                            </label>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-3 pt-2">
+                          <button type="button" onClick={() => {
+                            setShowCreateCampaign(false)
+                            setCampaignMode('STANDARD')
+                          }} className="flex-1 py-2.5 text-sm font-bold border border-white/10 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition-colors">Cancel</button>
+                          <button type="submit" disabled={isUploadingCSV} className="flex-1 py-2.5 text-sm font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                            {isUploadingCSV ? (
+                              <>
+                                <span className="animate-spin rounded-full h-4 w-4 border-2 border-t-transparent border-white"></span>
+                                Uploading...
+                              </>
+                            ) : 'Create & Upload'}
+                          </button>
+                        </div>
+                      </form>
+                    )}
                   </div>
                 </div>
               )}
+
 
               {/* Campaigns List */}
               <div className="space-y-4">
@@ -1264,6 +1561,16 @@ export default function AdminDashboard() {
                           <p className="text-xs text-gray-500">{total} contacts · {camp.type} · Created {formatDate(camp.created_at)}</p>
                         </div>
                         <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => {
+                              setActiveStatsCampaign(camp)
+                              setAutoRefreshStats(true)
+                              fetchLiveCampaignStats(camp.id, token())
+                            }}
+                            className="px-3 py-1.5 text-xs font-bold bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-lg hover:bg-indigo-500/20 transition-colors"
+                          >
+                            📊 Live Stats
+                          </button>
                           <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${camp.status === 'RUNNING' ? 'bg-green-950/40 border-green-500/20 text-green-400 animate-pulse' : camp.status === 'COMPLETED' ? 'bg-blue-950/40 border-blue-500/20 text-blue-400' : camp.status === 'PAUSED' ? 'bg-yellow-950/40 border-yellow-500/20 text-yellow-400' : 'bg-gray-950/40 border-gray-500/20 text-gray-400'}`}>{camp.status}</span>
                           {camp.status === 'RUNNING'
                             ? <button onClick={() => handleCampaignPause(camp.id)} className="px-3 py-1.5 text-xs font-bold bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 rounded-lg hover:bg-yellow-500/20 transition-colors">⏸ Pause</button>
@@ -1419,64 +1726,266 @@ export default function AdminDashboard() {
           {activeTab === 'api-keys' && (
             <div className="space-y-6 animate-in fade-in duration-300">
               <h2 className="text-2xl font-bold text-white">API Keys & Settings</h2>
-              <form onSubmit={handleSaveVapiConfig} className="space-y-6">
-                {/* VAPI Config */}
-                <div className="bg-[#111113] border border-white/5 rounded-xl p-6 space-y-4">
-                  <h3 className="text-white font-bold">VAPI Configuration</h3>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">VAPI API Key</label>
-                    <div className="flex gap-2">
-                      <input type="password" value={vapiConfig.vapi_api_key} onChange={e => setVapiConfig({ ...vapiConfig, vapi_api_key: e.target.value })}
-                        className="flex-1 bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500 font-mono"
-                        placeholder="vapi_••••••••••" />
-                      <button type="button" onClick={handleTestVapi} disabled={testingVapi}
-                        className="px-4 py-2.5 bg-indigo-600/20 border border-indigo-500/20 text-indigo-400 text-sm font-bold rounded-lg hover:bg-indigo-600/30 transition-colors disabled:opacity-50">
-                        {testingVapi ? '...' : 'Test'}
-                      </button>
+              <form onSubmit={handleSaveProviderConfig} className="space-y-8">
+                {/* Header & Active Provider Section */}
+                <div className="relative overflow-hidden bg-gradient-to-br from-indigo-900/40 via-purple-900/20 to-black border border-indigo-500/30 rounded-2xl p-8 shadow-2xl shadow-indigo-500/10">
+                  <div className="absolute top-0 right-0 p-8 opacity-20 pointer-events-none">
+                    <svg className="w-32 h-32 text-indigo-400" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                  </div>
+                  <div className="relative z-10">
+                    <h3 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400 mb-2">Telephony Engine</h3>
+                    <p className="text-sm text-indigo-200/70 mb-6">Select your primary voice provider for outbound and inbound calls.</p>
+                    
+                    <div className="flex flex-wrap gap-3 mt-4">
+                      {[
+                        { id: 'VAPI', label: 'VAPI', icon: '🚀', desc: 'Recommended' },
+                        { id: 'RETELL', label: 'Retell AI', icon: '⚡', desc: 'Low Latency' },
+                        { id: 'BLAND_AI', label: 'Bland AI', icon: '🎯', desc: 'High Volume' },
+                        { id: 'TELNYX', label: 'Telnyx', icon: '🌐', desc: 'Enterprise SIP' }
+                      ].map(provider => {
+                        const isActive = providerConfig.telephony_provider === provider.id;
+                        return (
+                          <button
+                            key={provider.id}
+                            type="button"
+                            onClick={() => setProviderConfig({ ...providerConfig, telephony_provider: provider.id })}
+                            className={`relative flex items-center gap-3 px-5 py-3 rounded-xl border transition-all duration-300 overflow-hidden ${
+                              isActive 
+                                ? 'bg-indigo-500/20 border-indigo-500/50 shadow-[0_0_20px_rgba(99,102,241,0.2)] scale-[1.02]' 
+                                : 'bg-black/40 border-white/10 hover:border-white/20 hover:bg-white/5'
+                            }`}
+                          >
+                            {isActive && (
+                              <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 opacity-50"></div>
+                            )}
+                            <span className="relative z-10 text-xl">{provider.icon}</span>
+                            <div className="relative z-10 flex flex-col items-start text-left">
+                              <span className={`text-sm font-bold ${isActive ? 'text-white' : 'text-gray-300'}`}>{provider.label}</span>
+                              <span className={`text-[10px] uppercase tracking-wider ${isActive ? 'text-indigo-300' : 'text-gray-500'}`}>{provider.desc}</span>
+                            </div>
+                            {isActive && (
+                              <div className="relative z-10 ml-2 w-2 h-2 rounded-full bg-indigo-400 shadow-[0_0_8px_rgba(129,140,248,0.8)] animate-pulse"></div>
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
-                    {vapiTestResult && (
-                      <p className={`mt-2 text-xs font-bold ${vapiTestResult.valid ? 'text-green-400' : 'text-blue-400'}`}>{vapiTestResult.message}</p>
-                    )}
-                    <p className="text-xs text-gray-500 mt-1.5">Get your key from <a href="https://dashboard.vapi.ai" target="_blank" className="text-indigo-400 hover:underline">dashboard.vapi.ai</a></p>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1.5">VAPI Phone Number ID (for outbound calls)</label>
-                    <input type="text" value={vapiConfig.vapi_phone_number} onChange={e => setVapiConfig({ ...vapiConfig, vapi_phone_number: e.target.value })}
-                      className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500 font-mono"
-                      placeholder="phnum_••••••" />
-                    <p className="text-xs text-gray-500 mt-1.5">The Phone Number ID from your VAPI dashboard (not the actual number)</p>
                   </div>
                 </div>
 
-                {/* Notification Settings */}
-                <div className="bg-[#111113] border border-white/5 rounded-xl p-6 space-y-4">
-                  <h3 className="text-white font-bold">Lead Notifications</h3>
-                  <p className="text-xs text-gray-400">Get notified when a new lead is captured from a call.</p>
-                  <div className="space-y-3">
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <input type="checkbox" checked={notifSettings.email} onChange={e => setNotifSettings({ ...notifSettings, email: e.target.checked })} className="rounded" />
-                      <span className="text-sm text-gray-300">Email notifications</span>
-                    </label>
-                    {notifSettings.email && (
-                      <input type="email" value={notifSettings.email_address} onChange={e => setNotifSettings({ ...notifSettings, email_address: e.target.value })}
-                        className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500 ml-7"
-                        placeholder="alerts@youremail.com" />
-                    )}
-                    <label className="flex items-center gap-3 cursor-pointer">
-                      <input type="checkbox" checked={notifSettings.sms} onChange={e => setNotifSettings({ ...notifSettings, sms: e.target.checked })} className="rounded" />
-                      <span className="text-sm text-gray-300">SMS notifications (requires MSG91/Twilio)</span>
-                    </label>
-                    {notifSettings.sms && (
-                      <input type="tel" value={notifSettings.phone_number} onChange={e => setNotifSettings({ ...notifSettings, phone_number: e.target.value })}
-                        className="w-full bg-black/60 border border-white/10 rounded-lg px-4 py-2.5 text-white text-sm outline-none focus:border-indigo-500 ml-7 font-mono"
-                        placeholder="+91 98765 43210" />
-                    )}
+                {/* Grid for settings */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  
+                  {/* Selected Provider Config */}
+                  {providerConfig.telephony_provider === 'VAPI' && (
+                    <div className="bg-[#111113]/80 backdrop-blur-xl border border-white/5 rounded-2xl p-7 shadow-xl hover:border-indigo-500/30 transition-all group">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="p-3 bg-indigo-500/10 rounded-xl group-hover:scale-110 transition-transform"><span className="text-xl">🚀</span></div>
+                        <div>
+                          <h3 className="text-white font-bold text-lg">VAPI Settings</h3>
+                          <p className="text-xs text-gray-500">Configure your ElevenLabs-powered engine</p>
+                        </div>
+                      </div>
+                      <div className="space-y-5">
+                        <div className="group/input">
+                          <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 group-hover/input:text-indigo-400 transition-colors">VAPI API Key</label>
+                          <div className="flex gap-2">
+                            <input type="password" value={providerConfig.vapi_api_key} onChange={e => setProviderConfig({ ...providerConfig, vapi_api_key: e.target.value })}
+                              className="flex-1 bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 transition-all font-mono shadow-inner"
+                              placeholder="vapi_••••••••••" />
+                            <button type="button" onClick={() => handleTestProvider('VAPI', providerConfig.vapi_api_key)} disabled={testingVapi}
+                              className="px-5 py-3 bg-indigo-600/10 border border-indigo-500/20 text-indigo-400 text-sm font-bold rounded-xl hover:bg-indigo-600 hover:text-white transition-all disabled:opacity-50 active:scale-95 shadow-lg shadow-indigo-500/10">
+                              {testingVapi ? '...' : 'Test'}
+                            </button>
+                          </div>
+                          {vapiTestResult && (
+                            <p className={`mt-2 text-xs font-bold flex items-center gap-1 ${vapiTestResult.valid ? 'text-green-400' : 'text-rose-400'}`}>
+                              {vapiTestResult.valid ? '✓' : '✗'} {vapiTestResult.message}
+                            </p>
+                          )}
+                          <p className="text-[10px] text-gray-500 mt-2">Get your key from <a href="https://dashboard.vapi.ai" target="_blank" className="text-indigo-400 hover:text-indigo-300 hover:underline transition-colors">dashboard.vapi.ai</a></p>
+                        </div>
+                        <div className="group/input">
+                          <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 group-hover/input:text-indigo-400 transition-colors">Phone Number ID</label>
+                          <input type="text" value={providerConfig.vapi_phone_number} onChange={e => setProviderConfig({ ...providerConfig, vapi_phone_number: e.target.value })}
+                            className="w-full bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 transition-all font-mono shadow-inner"
+                            placeholder="phnum_••••••" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {providerConfig.telephony_provider === 'RETELL' && (
+                    <div className="bg-[#111113]/80 backdrop-blur-xl border border-white/5 rounded-2xl p-7 shadow-xl hover:border-emerald-500/30 transition-all group">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="p-3 bg-emerald-500/10 rounded-xl group-hover:scale-110 transition-transform"><span className="text-xl">⚡</span></div>
+                        <div>
+                          <h3 className="text-white font-bold text-lg">Retell AI Settings</h3>
+                          <p className="text-xs text-gray-500">Ultra-low latency English calling</p>
+                        </div>
+                      </div>
+                      <div className="space-y-5">
+                        <div className="group/input">
+                          <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 group-hover/input:text-emerald-400 transition-colors">Retell API Key</label>
+                          <div className="flex gap-2">
+                            <input type="password" value={providerConfig.retell_api_key} onChange={e => setProviderConfig({ ...providerConfig, retell_api_key: e.target.value })}
+                              className="flex-1 bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono shadow-inner"
+                              placeholder="key_••••••••••" />
+                            <button type="button" onClick={() => handleTestProvider('RETELL', providerConfig.retell_api_key)} disabled={testingVapi}
+                              className="px-5 py-3 bg-emerald-600/10 border border-emerald-500/20 text-emerald-400 text-sm font-bold rounded-xl hover:bg-emerald-600 hover:text-white transition-all disabled:opacity-50 active:scale-95 shadow-lg shadow-emerald-500/10">
+                              {testingVapi ? '...' : 'Test'}
+                            </button>
+                          </div>
+                          {vapiTestResult && (
+                            <p className={`mt-2 text-xs font-bold flex items-center gap-1 ${vapiTestResult.valid ? 'text-green-400' : 'text-rose-400'}`}>
+                              {vapiTestResult.valid ? '✓' : '✗'} {vapiTestResult.message}
+                            </p>
+                          )}
+                          <p className="text-[10px] text-gray-500 mt-2">Get your key from <a href="https://dashboard.retellai.com" target="_blank" className="text-emerald-400 hover:text-emerald-300 hover:underline transition-colors">dashboard.retellai.com</a></p>
+                        </div>
+                        <div className="group/input">
+                          <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 group-hover/input:text-emerald-400 transition-colors">Retell Phone Number</label>
+                          <input type="text" value={providerConfig.retell_phone_number} onChange={e => setProviderConfig({ ...providerConfig, retell_phone_number: e.target.value })}
+                            className="w-full bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 transition-all font-mono shadow-inner"
+                            placeholder="+1234567890" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {providerConfig.telephony_provider === 'BLAND_AI' && (
+                    <div className="bg-[#111113]/80 backdrop-blur-xl border border-white/5 rounded-2xl p-7 shadow-xl hover:border-amber-500/30 transition-all group">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="p-3 bg-amber-500/10 rounded-xl group-hover:scale-110 transition-transform"><span className="text-xl">🎯</span></div>
+                        <div>
+                          <h3 className="text-white font-bold text-lg">Bland AI Settings</h3>
+                          <p className="text-xs text-gray-500">Bulk outbound and high volume</p>
+                        </div>
+                      </div>
+                      <div className="space-y-5">
+                        <div className="group/input">
+                          <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 group-hover/input:text-amber-400 transition-colors">Bland API Key</label>
+                          <div className="flex gap-2">
+                            <input type="password" value={providerConfig.bland_api_key} onChange={e => setProviderConfig({ ...providerConfig, bland_api_key: e.target.value })}
+                              className="flex-1 bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 transition-all font-mono shadow-inner"
+                              placeholder="org_••••••••••" />
+                            <button type="button" onClick={() => handleTestProvider('BLAND_AI', providerConfig.bland_api_key)} disabled={testingVapi}
+                              className="px-5 py-3 bg-amber-600/10 border border-amber-500/20 text-amber-400 text-sm font-bold rounded-xl hover:bg-amber-600 hover:text-white transition-all disabled:opacity-50 active:scale-95 shadow-lg shadow-amber-500/10">
+                              {testingVapi ? '...' : 'Test'}
+                            </button>
+                          </div>
+                          {vapiTestResult && (
+                            <p className={`mt-2 text-xs font-bold flex items-center gap-1 ${vapiTestResult.valid ? 'text-green-400' : 'text-rose-400'}`}>
+                              {vapiTestResult.valid ? '✓' : '✗'} {vapiTestResult.message}
+                            </p>
+                          )}
+                          <p className="text-[10px] text-gray-500 mt-2">Get your key from <a href="https://app.bland.ai" target="_blank" className="text-amber-400 hover:text-amber-300 hover:underline transition-colors">app.bland.ai</a></p>
+                        </div>
+                        <div className="group/input">
+                          <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 group-hover/input:text-amber-400 transition-colors">Bland From Number</label>
+                          <input type="text" value={providerConfig.bland_phone_number} onChange={e => setProviderConfig({ ...providerConfig, bland_phone_number: e.target.value })}
+                            className="w-full bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500/50 transition-all font-mono shadow-inner"
+                            placeholder="+1234567890" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {providerConfig.telephony_provider === 'TELNYX' && (
+                    <div className="bg-[#111113]/80 backdrop-blur-xl border border-white/5 rounded-2xl p-7 shadow-xl hover:border-cyan-500/30 transition-all group">
+                      <div className="flex items-center gap-3 mb-6">
+                        <div className="p-3 bg-cyan-500/10 rounded-xl group-hover:scale-110 transition-transform"><span className="text-xl">🌐</span></div>
+                        <div>
+                          <h3 className="text-white font-bold text-lg">Telnyx Settings</h3>
+                          <p className="text-xs text-gray-500">Enterprise SIP routing & global reach</p>
+                        </div>
+                      </div>
+                      <div className="space-y-5">
+                        <div className="group/input">
+                          <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 group-hover/input:text-cyan-400 transition-colors">Telnyx API Key</label>
+                          <div className="flex gap-2">
+                            <input type="password" value={providerConfig.telnyx_api_key} onChange={e => setProviderConfig({ ...providerConfig, telnyx_api_key: e.target.value })}
+                              className="flex-1 bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 transition-all font-mono shadow-inner"
+                              placeholder="KEY01••••••••••" />
+                            <button type="button" onClick={() => handleTestProvider('TELNYX', providerConfig.telnyx_api_key)} disabled={testingVapi}
+                              className="px-5 py-3 bg-cyan-600/10 border border-cyan-500/20 text-cyan-400 text-sm font-bold rounded-xl hover:bg-cyan-600 hover:text-white transition-all disabled:opacity-50 active:scale-95 shadow-lg shadow-cyan-500/10">
+                              {testingVapi ? '...' : 'Test'}
+                            </button>
+                          </div>
+                          {vapiTestResult && (
+                            <p className={`mt-2 text-xs font-bold flex items-center gap-1 ${vapiTestResult.valid ? 'text-green-400' : 'text-rose-400'}`}>
+                              {vapiTestResult.valid ? '✓' : '✗'} {vapiTestResult.message}
+                            </p>
+                          )}
+                          <p className="text-[10px] text-gray-500 mt-2">Get your key from <a href="https://portal.telnyx.com" target="_blank" className="text-cyan-400 hover:text-cyan-300 hover:underline transition-colors">portal.telnyx.com</a></p>
+                        </div>
+                        <div className="group/input">
+                          <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-2 group-hover/input:text-cyan-400 transition-colors">Telnyx Connection ID</label>
+                          <input type="text" value={providerConfig.telnyx_phone_number} onChange={e => setProviderConfig({ ...providerConfig, telnyx_phone_number: e.target.value })}
+                            className="w-full bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/50 transition-all font-mono shadow-inner"
+                            placeholder="Connection ID" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Notification Settings */}
+                  <div className="bg-[#111113]/80 backdrop-blur-xl border border-white/5 rounded-2xl p-7 shadow-xl hover:border-white/10 transition-all group">
+                    <div className="flex items-center gap-3 mb-6">
+                      <div className="p-3 bg-white/5 rounded-xl group-hover:scale-110 transition-transform"><span className="text-xl">🔔</span></div>
+                      <div>
+                        <h3 className="text-white font-bold text-lg">Lead Notifications</h3>
+                        <p className="text-xs text-gray-500">Real-time alerts for conversions</p>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      <div className="p-4 bg-black/40 rounded-xl border border-white/5 shadow-inner">
+                        <label className="flex items-center justify-between cursor-pointer group/toggle">
+                          <span className="text-sm font-bold text-gray-300 group-hover/toggle:text-white transition-colors">Email Alerts</span>
+                          <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notifSettings.email ? 'bg-indigo-500' : 'bg-gray-700'}`}>
+                            <input type="checkbox" checked={notifSettings.email} onChange={e => setNotifSettings({ ...notifSettings, email: e.target.checked })} className="sr-only" />
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notifSettings.email ? 'translate-x-6' : 'translate-x-1'}`} />
+                          </div>
+                        </label>
+                        {notifSettings.email && (
+                          <div className="mt-4 animate-in slide-in-from-top-2 fade-in duration-200">
+                            <input type="email" value={notifSettings.email_address} onChange={e => setNotifSettings({ ...notifSettings, email_address: e.target.value })}
+                              className="w-full bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 transition-all shadow-inner"
+                              placeholder="alerts@yourcompany.com" />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="p-4 bg-black/40 rounded-xl border border-white/5 shadow-inner">
+                        <label className="flex items-center justify-between cursor-pointer group/toggle">
+                          <span className="text-sm font-bold text-gray-300 group-hover/toggle:text-white transition-colors">SMS Alerts</span>
+                          <div className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${notifSettings.sms ? 'bg-indigo-500' : 'bg-gray-700'}`}>
+                            <input type="checkbox" checked={notifSettings.sms} onChange={e => setNotifSettings({ ...notifSettings, sms: e.target.checked })} className="sr-only" />
+                            <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${notifSettings.sms ? 'translate-x-6' : 'translate-x-1'}`} />
+                          </div>
+                        </label>
+                        {notifSettings.sms && (
+                          <div className="mt-4 animate-in slide-in-from-top-2 fade-in duration-200">
+                            <input type="tel" value={notifSettings.phone_number} onChange={e => setNotifSettings({ ...notifSettings, phone_number: e.target.value })}
+                              className="w-full bg-black/60 border border-white/10 rounded-xl px-4 py-3 text-white text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/50 transition-all font-mono shadow-inner"
+                              placeholder="+1234567890" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
 
-                <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-xl text-sm transition-colors">
-                  Save Settings
-                </button>
+                <div className="pt-4 flex justify-end">
+                  <button type="submit" className="relative group px-8 py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-sm transition-all overflow-hidden shadow-xl shadow-indigo-500/20 active:scale-95">
+                    <span className="relative z-10 flex items-center gap-2">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                      Save Configuration
+                    </span>
+                    <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  </button>
+                </div>
               </form>
             </div>
           )}
@@ -1567,6 +2076,51 @@ export default function AdminDashboard() {
 
         </div>
       </main>
+
+      {/* ── Buy Bland AI Number Modal ─────────── */}
+      {showBuyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="relative w-full max-w-md bg-gradient-to-br from-[#18181b] to-black border border-white/10 rounded-2xl p-6 shadow-2xl space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                <span>🎯</span> Buy Bland AI Number
+              </h3>
+              <button onClick={() => setShowBuyModal(false)} className="text-gray-400 hover:text-white text-lg">✕</button>
+            </div>
+            <p className="text-xs text-gray-400">
+              Bland AI will assign a number from your requested area code and country. A subscription fee (approx. $15/mo) will apply directly to your Bland AI balance.
+            </p>
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Country Code</label>
+                <select value={buyCountryCode} onChange={e => setBuyCountryCode(e.target.value)}
+                  className="w-full bg-black/60 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm outline-none focus:border-indigo-500">
+                  <option value="US">United States (US)</option>
+                  <option value="CA">Canada (CA)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Area Code</label>
+                <input type="text" value={buyAreaCode} onChange={e => setBuyAreaCode(e.target.value)}
+                  className="w-full bg-black/60 border border-white/10 rounded-lg px-3 py-2.5 text-white text-sm outline-none focus:border-indigo-500 font-mono"
+                  placeholder="e.g. 415" />
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button type="button" onClick={() => setShowBuyModal(false)}
+                className="flex-1 py-2.5 text-sm font-bold border border-white/10 rounded-lg text-gray-400 hover:text-white transition-colors">
+                Cancel
+              </button>
+              <button type="button" onClick={handleBuyNumber} disabled={buyingNumber}
+                className="flex-1 py-2.5 text-sm font-bold bg-amber-600 hover:bg-amber-500 text-white rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2">
+                {buyingNumber ? 'Purchasing...' : 'Buy Number'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Razorpay Modal ────────────────────── */}
       {showRazorpayModal && (
@@ -2028,6 +2582,186 @@ export default function AdminDashboard() {
                 </div>
               )}
 
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Live Campaign Stats Modal ───────── */}
+      {activeStatsCampaign && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-[#111113] border border-white/10 rounded-2xl w-full max-w-5xl p-6 flex flex-col h-[90vh] max-h-[850px] shadow-2xl animate-in fade-in zoom-in-95 duration-300">
+            {/* Header */}
+            <div className="flex justify-between items-center border-b border-white/5 pb-4 shrink-0">
+              <div>
+                <h3 className="text-white font-bold text-lg flex items-center gap-2">
+                  <span>📊 Live Campaign Tracker:</span>
+                  <span className="text-indigo-400 font-extrabold">{activeStatsCampaign.name}</span>
+                </h3>
+                <p className="text-xs text-gray-400 mt-0.5">Real-time status, call outcomes, transcripts, and leads</p>
+              </div>
+              <button type="button" onClick={() => {
+                setActiveStatsCampaign(null)
+                setAutoRefreshStats(false)
+              }} className="text-gray-500 hover:text-white text-lg">✕</button>
+            </div>
+
+            {/* Content Container - Scrollable */}
+            <div className="flex-1 overflow-y-auto py-6 min-h-0 space-y-6">
+              {/* Quick Stats Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+                {[
+                  { label: 'Total Contacts', value: activeStatsCampaign.total_contacts || 0, color: 'border-white/5 bg-white/5' },
+                  { label: 'Initiated/Ringing', value: activeStatsCampaign.initiated || 0, color: 'border-blue-500/20 bg-blue-500/5 text-blue-400' },
+                  { label: 'Completed', value: activeStatsCampaign.calls_completed || 0, color: 'border-indigo-500/20 bg-indigo-500/5 text-indigo-400' },
+                  { label: 'Successful/Leads', value: activeStatsCampaign.calls_successful || 0, color: 'border-green-500/20 bg-green-500/5 text-green-400' },
+                  { label: 'Failed Calls', value: activeStatsCampaign.calls_failed || 0, color: 'border-red-500/20 bg-red-500/5 text-red-400' },
+                  { label: 'No Answer', value: activeStatsCampaign.no_answer || 0, color: 'border-yellow-500/20 bg-yellow-500/5 text-yellow-400' },
+                ].map(stat => (
+                  <div key={stat.label} className={`border rounded-xl p-4 text-center ${stat.color}`}>
+                    <p className="text-[10px] font-bold opacity-80 uppercase tracking-wider">{stat.label}</p>
+                    <p className="text-2xl font-black mt-1.5">{stat.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Live Monitoring Control Bar */}
+              <div className="flex justify-between items-center bg-white/5 border border-white/5 rounded-xl p-4 shrink-0">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-2 w-2 relative">
+                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${autoRefreshStats ? 'bg-green-400' : 'bg-gray-400'}`}></span>
+                    <span className={`relative inline-flex rounded-full h-2 w-2 ${autoRefreshStats ? 'bg-green-500' : 'bg-gray-500'}`}></span>
+                  </span>
+                  <span className="text-xs font-bold text-gray-300">
+                    {autoRefreshStats ? 'Auto-refreshing every 5s' : 'Auto-refresh paused'}
+                  </span>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <button type="button" onClick={() => setAutoRefreshStats(!autoRefreshStats)}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all ${
+                      autoRefreshStats ? 'bg-green-600/20 border-green-500/20 text-green-400 hover:bg-green-600/30' : 'bg-white/5 border-white/10 text-gray-300 hover:bg-white/10'
+                    }`}>
+                    {autoRefreshStats ? '⏸ Pause Auto-Refresh' : '▶ Enable Auto-Refresh'}
+                  </button>
+                  <button type="button" onClick={() => fetchLiveCampaignStats(activeStatsCampaign.id, token())}
+                    className="px-3 py-1.5 text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors">
+                    🔄 Refresh Now
+                  </button>
+                </div>
+              </div>
+
+              {/* Call Log List */}
+              <div className="space-y-3">
+                <h4 className="text-white font-bold text-sm">Campaign Call Registry</h4>
+                
+                <div className="border border-white/5 rounded-xl overflow-hidden bg-black/20">
+                  {liveCalls.length === 0 ? (
+                    <p className="text-gray-500 text-xs text-center py-12">No calls have been registered for this campaign yet.</p>
+                  ) : (
+                    <div className="divide-y divide-white/5">
+                      {liveCalls.map(call => {
+                        const isExpanded = expandedLiveCall === call.id;
+                        const hasCollected = !!call.collected_data;
+                        const interested = call.collected_data?.interested;
+                        
+                        return (
+                          <div key={call.id} className="hover:bg-white/5 transition-colors">
+                            {/* Row Header */}
+                            <div className="p-4 flex flex-wrap md:flex-nowrap items-center justify-between gap-4 cursor-pointer"
+                              onClick={() => setExpandedLiveCall(isExpanded ? null : call.id)}>
+                              
+                              <div className="flex items-center gap-3 min-w-[150px]">
+                                <span className="text-xs text-white font-bold font-mono">{call.phone_number || 'Unknown'}</span>
+                              </div>
+
+                              <div>
+                                <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase border ${
+                                  call.status === 'completed' ? 'bg-green-950/40 border-green-500/20 text-green-400' :
+                                  call.status === 'failed' ? 'bg-red-950/40 border-red-500/20 text-red-400' :
+                                  call.status === 'no_answer' ? 'bg-yellow-950/40 border-yellow-500/20 text-yellow-400' :
+                                  'bg-blue-950/40 border-blue-500/20 text-blue-400 animate-pulse'
+                                }`}>
+                                  {call.status}
+                                </span>
+                              </div>
+
+                              <div className="text-xs text-gray-400 min-w-[70px]">
+                                {call.duration_sec ? `${Math.floor(call.duration_sec / 60)}m ${call.duration_sec % 60}s` : '—'}
+                              </div>
+
+                              <div className="min-w-[120px]">
+                                {hasCollected ? (
+                                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                    interested ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                                  }`}>
+                                    {interested ? '✨ Interested' : 'Not Interested'}
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-gray-500">—</span>
+                                )}
+                              </div>
+
+                              <div className="text-xs text-gray-400 font-mono min-w-[60px]">
+                                {call.cost_usd ? `$${call.cost_usd.toFixed(2)}` : '—'}
+                              </div>
+
+                              <div className="text-[11px] text-gray-500">
+                                {formatDate(call.created_at)}
+                              </div>
+
+                              <div className="text-indigo-400 text-xs font-bold hover:underline">
+                                {isExpanded ? 'Hide Details' : 'Show Details'}
+                              </div>
+                            </div>
+
+                            {/* Expanded Content */}
+                            {isExpanded && (
+                              <div className="p-4 bg-black/40 border-t border-white/5 space-y-4 text-xs">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  {/* Call Details */}
+                                  <div className="space-y-2">
+                                    <h5 className="text-white font-bold text-xs uppercase tracking-wider opacity-60">Call Details</h5>
+                                    <p className="text-gray-400">Call ID: <span className="font-mono text-white select-all">{call.vapi_call_id}</span></p>
+                                    {call.recording_url && (
+                                      <div className="pt-2">
+                                        <p className="text-gray-400 mb-1">Call Recording:</p>
+                                        <audio src={call.recording_url} controls className="w-full max-w-md h-8 opacity-80" />
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Collected Lead Info */}
+                                  {hasCollected && (
+                                    <div className="space-y-2 bg-white/5 border border-white/5 p-3 rounded-lg">
+                                      <h5 className="text-white font-bold text-xs uppercase tracking-wider opacity-60">Captured Lead Details</h5>
+                                      <p className="text-gray-400">Name: <span className="text-white font-bold">{call.collected_data.name || '—'}</span></p>
+                                      <p className="text-gray-400">Email: <span className="text-white font-bold">{call.collected_data.email || '—'}</span></p>
+                                      <p className="text-gray-400">Intent Score: <span className="text-green-400 font-bold">{Math.round((call.collected_data.intent_score || 0) * 100)}%</span></p>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Transcript */}
+                                <div className="space-y-1">
+                                  <h5 className="text-white font-bold text-xs uppercase tracking-wider opacity-60">Call Transcript</h5>
+                                  {call.transcript ? (
+                                    <div className="bg-[#0c0c0e] border border-white/5 rounded-lg p-3 text-gray-300 font-sans leading-relaxed whitespace-pre-wrap max-h-40 overflow-y-auto">
+                                      {call.transcript}
+                                    </div>
+                                  ) : (
+                                    <p className="text-gray-500 italic">No transcript recorded for this call.</p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </div>

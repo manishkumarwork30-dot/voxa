@@ -30,7 +30,12 @@ ALTER TABLE campaigns
 -- ----------------------------------------
 ALTER TABLE users
   ADD COLUMN IF NOT EXISTS wallet_balance NUMERIC(12, 4) DEFAULT 0,
-  ADD COLUMN IF NOT EXISTS notification_settings JSONB DEFAULT '{"email": false, "sms": false, "whatsapp": false, "email_address": "", "phone_number": ""}';
+  ADD COLUMN IF NOT EXISTS notification_settings JSONB DEFAULT '{"email": false, "sms": false, "whatsapp": false, "email_address": "", "phone_number": ""}',
+  ADD COLUMN IF NOT EXISTS telephony_provider TEXT DEFAULT 'VAPI',
+  ADD COLUMN IF NOT EXISTS retell_api_key TEXT,
+  ADD COLUMN IF NOT EXISTS retell_phone_number TEXT,
+  ADD COLUMN IF NOT EXISTS bland_api_key TEXT,
+  ADD COLUMN IF NOT EXISTS bland_phone_number TEXT;
 
 -- ----------------------------------------
 -- 4. NEW: LEADS table

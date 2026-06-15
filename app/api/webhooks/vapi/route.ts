@@ -9,9 +9,47 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { message } = body;
 
-    // VAPI sends events inside a "message" wrapper
-    const type: string = message?.type || body.type;
-    const call = message?.call || body.call;
+    // Multi-provider payload normalization
+    let type: string = message?.type || body.type;
+    let call = message?.call || body.call;
+
+    // Retell AI format
+    if (body.event) {
+      if (body.event === "call_started") type = "call-started";
+      if (body.event === "call_ended" || body.event === "call_analyzed") type = "end-of-call-report";
+      call = {
+        id: body.call_id || body.call?.call_id,
+        phoneNumber: { number: body.call?.from_number || "" },
+        customer: { number: body.call?.to_number || "" },
+        transcript: body.transcript || body.call?.transcript,
+        recordingUrl: body.call?.recording_url,
+        duration: body.call?.duration_ms ? body.call.duration_ms / 1000 : 0,
+        endedReason: body.call?.disconnection_reason === "customer_hangup" ? "customer-ended-call" : "assistant-ended-call",
+        assistantId: body.call?.agent_id
+      };
+    }
+
+    // Bland AI format
+    if (body.status === "completed" || body.call_id) {
+      if (!type) {
+        type = body.status === "completed" ? "end-of-call-report" : "call-started";
+      }
+      let transcriptText = "";
+      if (body.transcripts && Array.isArray(body.transcripts)) {
+        transcriptText = body.transcripts.map((t: any) => `${t.user}: ${t.text}`).join("\n");
+      } else {
+        transcriptText = body.concatenated_transcript || "";
+      }
+      call = {
+        id: body.call_id,
+        phoneNumber: { number: body.from || "" },
+        customer: { number: body.to || "" },
+        transcript: transcriptText,
+        recordingUrl: body.recording_url,
+        duration: body.call_length || 0,
+        endedReason: "customer-ended-call",
+      };
+    }
 
     if (!type) {
       return NextResponse.json({ error: "Invalid webhook payload" }, { status: 400 });

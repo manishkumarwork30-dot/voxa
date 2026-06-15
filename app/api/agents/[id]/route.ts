@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import { supabase } from "@/lib/supabase";
-import { getVapiClientForAdmin, getLanguageCode } from "@/lib/vapi";
+import { getTelephonyClientForAdmin } from "@/lib/telephony";
 import { compileFlowToPrompt } from "@/lib/flow-compiler";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-this-in-production";
@@ -80,15 +80,18 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     !existingAgent.vapi_agent_id.startsWith("chat_")
   ) {
     try {
-      const vapiClient = await getVapiClientForAdmin(adminId);
-      await vapiClient.updateAgent(existingAgent.vapi_agent_id, {
+      const { getTelephonyClientForAgent } = await import("@/lib/telephony");
+      const { client: telephonyClient, remoteId } = await getTelephonyClientForAgent(adminId, existingAgent.vapi_agent_id);
+      const targetLang = language || existingAgent.language;
+      const langCode = targetLang === 'HINDI' ? 'hi' : targetLang === 'HINGLISH' ? 'hinglish' : 'en';
+      await telephonyClient.updateAgent(remoteId, {
         name: name || existingAgent.name,
         systemPrompt: compiledPrompt,
         voiceId: voice_model || existingAgent.voice_model,
-        language: getLanguageCode(language || existingAgent.language),
+        language: langCode,
       });
     } catch (err) {
-      console.error("VAPI agent update failed:", err);
+      console.error("Telephony agent update failed:", err);
     }
   }
 
@@ -111,13 +114,14 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     .from("agents").select("*").eq("id", id).eq("admin_id", adminId).single();
   if (!existingAgent) return NextResponse.json({ error: "Agent not found" }, { status: 404 });
 
-  // Delete from VAPI first
-  if (existingAgent.vapi_agent_id && !existingAgent.vapi_agent_id.startsWith("placeholder_")) {
+  // Delete from Telephony provider first
+  if (existingAgent.vapi_agent_id && !existingAgent.vapi_agent_id.startsWith("placeholder_") && !existingAgent.vapi_agent_id.startsWith("chat_")) {
     try {
-      const vapiClient = await getVapiClientForAdmin(adminId);
-      await vapiClient.deleteAgent(existingAgent.vapi_agent_id);
+      const { getTelephonyClientForAgent } = await import("@/lib/telephony");
+      const { client: telephonyClient, remoteId } = await getTelephonyClientForAgent(adminId, existingAgent.vapi_agent_id);
+      await telephonyClient.deleteAgent(remoteId);
     } catch (err) {
-      console.error("VAPI agent deletion failed:", err);
+      console.error("Telephony agent deletion failed:", err);
     }
   }
 

@@ -38,9 +38,10 @@ async function main() {
   if (existing) {
     console.log(`✅ Super admin already exists: ${existing.email} (id: ${existing.id})`);
     console.log('   Updating role to SUPER_ADMIN just in case...');
+    const passwordHash = await bcrypt.hash(password, 12);
     await supabase
       .from('users')
-      .update({ role: 'SUPER_ADMIN' })
+      .update({ role: 'SUPER_ADMIN', password_hash: passwordHash })
       .eq('id', existing.id);
     console.log('   Done.');
     process.exit(0);

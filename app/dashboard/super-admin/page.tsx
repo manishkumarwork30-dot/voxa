@@ -14,6 +14,7 @@ interface User {
   monthly_calls_limit?: number
   monthly_calls_used?: number
   wallet_balance?: number
+  telephony_provider?: string
   created_at: string
 }
 
@@ -503,6 +504,7 @@ const handleAssignPlan = async (targetUserId: string, selectedPlan: string) => {
                     <th className="py-4 px-6">Email</th>
                     <th className="py-4 px-6">Role</th>
                     <th className="py-4 px-6">Active Package</th>
+                    <th className="py-4 px-6">Provider</th>
                     <th className="py-4 px-6">Balance</th>
                     <th className="py-4 px-6">Status</th>
                     <th className="py-4 px-6">Actions</th>
@@ -535,6 +537,15 @@ const handleAssignPlan = async (targetUserId: string, selectedPlan: string) => {
                             <option value="PRO">Pro ($49)</option>
                             <option value="ENTERPRISE">Enterprise ($199)</option>
                           </select>
+                        ) : (
+                          <span className="text-gray-500 text-xs">—</span>
+                        )}
+                      </td>
+                      <td className="py-4 px-6">
+                        {u.role.toUpperCase() === 'ADMIN' ? (
+                          <span className="px-2.5 py-1 text-xs font-bold bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-md">
+                            {u.telephony_provider || 'VAPI'}
+                          </span>
                         ) : (
                           <span className="text-gray-500 text-xs">—</span>
                         )}

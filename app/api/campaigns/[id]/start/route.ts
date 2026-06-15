@@ -48,7 +48,10 @@ export async function POST(
 
   // Fetch admin for call limit check
   const { data: admin } = await supabase
-    .from("users").select("monthly_calls_limit, monthly_calls_used, vapi_phone_number, vapi_api_key, is_active").eq("id", adminId).single();
+    .from("users")
+    .select("monthly_calls_limit, monthly_calls_used, vapi_phone_number, retell_phone_number, bland_phone_number, telnyx_phone_number, vapi_api_key, retell_api_key, bland_api_key, telnyx_api_key, is_active")
+    .eq("id", adminId)
+    .single();
   if (!admin?.is_active) return NextResponse.json({ error: "Admin inactive" }, { status: 403 });
 
   const automation = campaign.automation_settings as {
@@ -87,7 +90,10 @@ export async function POST(
 
       // Check call limits
       const { data: freshAdmin } = await supabase
-        .from("users").select("monthly_calls_limit, monthly_calls_used, vapi_phone_number").eq("id", adminId).single();
+        .from("users")
+        .select("monthly_calls_limit, monthly_calls_used, vapi_phone_number, retell_phone_number, bland_phone_number, telnyx_phone_number, vapi_api_key, retell_api_key, bland_api_key, telnyx_api_key")
+        .eq("id", adminId)
+        .single();
       if (!freshAdmin) break;
       if ((freshAdmin.monthly_calls_used || 0) >= (freshAdmin.monthly_calls_limit || 100)) break;
 
@@ -95,8 +101,9 @@ export async function POST(
       const phoneNumber = typeof contact === "string" ? contact : contact.phone;
       const contactName = typeof contact === "object" ? contact.name : undefined;
 
-      // Dial using VAPI or simulate
-      const isMock = !admin.vapi_api_key || campaign.caller_number_type === "SIMULATE";
+      // Dial using provider or simulate
+      const hasTelephonyKey = admin.vapi_api_key || admin.retell_api_key || admin.bland_api_key || admin.telnyx_api_key;
+      const isMock = !hasTelephonyKey || campaign.caller_number_type === "SIMULATE";
 
       if (isMock) {
         // Sandbox mode
@@ -114,16 +121,27 @@ export async function POST(
         });
       } else {
         try {
-          const vapiClient = await getVapiClientForAdmin(adminId);
-          const vapiCall = await vapiClient.makeOutboundCall({
+          const { getTelephonyClientForAgent } = await import("@/lib/telephony");
+          const { client: telephonyClient, remoteId, provider } = await getTelephonyClientForAgent(adminId, agent.vapi_agent_id);
+
+          let phoneNumberId = freshAdmin.vapi_phone_number || campaign.custom_caller_id || "";
+          if (provider === 'RETELL') {
+            phoneNumberId = freshAdmin.retell_phone_number || campaign.custom_caller_id || "";
+          } else if (provider === 'BLAND_AI') {
+            phoneNumberId = freshAdmin.bland_phone_number || campaign.custom_caller_id || "";
+          } else if (provider === 'TELNYX') {
+            phoneNumberId = freshAdmin.telnyx_phone_number || campaign.custom_caller_id || "";
+          }
+
+          const callResult = await telephonyClient.makeOutboundCall({
             phoneNumber,
-            assistantId: agent.vapi_agent_id,
-            phoneNumberId: freshAdmin.vapi_phone_number || campaign.custom_caller_id || "",
+            assistantId: remoteId,
+            phoneNumberId,
             customerName: contactName,
           });
 
           await supabase.from("calls").insert({
-            vapi_call_id: vapiCall.id || `vapi_${Date.now()}`,
+            vapi_call_id: callResult.id || `call_${Date.now()}`,
             admin_id: adminId,
             agent_id: campaign.agent_id,
             campaign_id: id,

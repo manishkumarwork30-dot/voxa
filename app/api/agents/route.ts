@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import { supabase } from "@/lib/supabase";
-import { getVapiClientForAdmin, getLanguageCode } from "@/lib/vapi";
+import { getLanguageCode } from "@/lib/vapi";
+import { getTelephonyClientForAdmin } from "@/lib/telephony";
 import { compileFlowToPrompt } from "@/lib/flow-compiler";
+import { decrypt } from "@/lib/encrypt";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-this-in-production";
 
@@ -60,7 +62,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json();
   const {
     name, language, voice_model, system_prompt, flow_builder, tone,
-    type = "VOICE", template_id, call_flow, chat_config,
+    type = "VOICE", template_id, call_flow, chat_config, telephony_provider,
   } = body;
 
   if (!name || !language || !system_prompt) {
@@ -85,7 +87,11 @@ export async function POST(request: NextRequest) {
   const adminId = decoded.userId!;
 
   // Check admin exists + plan limits
-  const { data: admin } = await supabase.from("users").select("is_active, plan, vapi_api_key").eq("id", adminId).single();
+  const { data: admin } = await supabase.from("users")
+    .select("is_active, plan, vapi_api_key, retell_api_key, bland_api_key, telnyx_api_key, telephony_provider")
+    .eq("id", adminId)
+    .single();
+
   if (!admin?.is_active) return NextResponse.json({ error: "Admin not found or inactive" }, { status: 404 });
 
   const { count: currentCount } = await supabase.from("agents").select("id", { count: "exact", head: true }).eq("admin_id", adminId);
@@ -100,29 +106,46 @@ export async function POST(request: NextRequest) {
     finalPrompt = compileFlowToPrompt(call_flow, system_prompt);
   }
 
-  // Try to create real VAPI agent (only for VOICE or BOTH types)
+  // Determine which provider to use for this specific agent
+  const selectedProvider = (telephony_provider || admin.telephony_provider || 'VAPI') as 'VAPI' | 'RETELL' | 'BLAND_AI' | 'TELNYX';
+
+  // Try to create real agent on configured provider (only for VOICE or BOTH types)
   let vapiAgentId = `placeholder_${Date.now()}`;
   let vapiLinked = false;
 
-  if ((type === "VOICE" || type === "BOTH") && admin.vapi_api_key) {
+  let encryptedKey = '';
+  if (selectedProvider === 'VAPI') encryptedKey = admin.vapi_api_key;
+  if (selectedProvider === 'RETELL') encryptedKey = admin.retell_api_key;
+  if (selectedProvider === 'BLAND_AI') encryptedKey = admin.bland_api_key;
+  if (selectedProvider === 'TELNYX') encryptedKey = admin.telnyx_api_key;
+
+  if ((type === "VOICE" || type === "BOTH") && encryptedKey) {
     try {
-      const vapiClient = await getVapiClientForAdmin(adminId);
-      const langCode = getLanguageCode(language);
-      const vapiAgent = await vapiClient.createAgent({
+      let apiKey: string;
+      try {
+        apiKey = decrypt(encryptedKey);
+      } catch {
+        apiKey = encryptedKey;
+      }
+      
+      const { TelephonyClient } = await import("@/lib/telephony");
+      const telephonyClient = new TelephonyClient(selectedProvider, apiKey);
+      const langCode = language === 'HINDI' ? 'hi' : language === 'HINGLISH' ? 'hinglish' : 'en';
+      const remoteAgent = await telephonyClient.createAgent({
         name,
         systemPrompt: finalPrompt,
         voiceId: voice_model,
         language: langCode,
       });
-      if (vapiAgent?.id) {
-        vapiAgentId = vapiAgent.id;
+      if (remoteAgent?.id) {
+        vapiAgentId = `${selectedProvider}:${remoteAgent.id}`;
         vapiLinked = true;
       }
     } catch (err) {
-      console.error("VAPI agent creation failed (will use placeholder):", err);
+      console.error("Telephony agent creation failed (will use placeholder):", err);
     }
   } else if (type === "CHAT") {
-    // Chat-only agents don't need VAPI
+    // Chat-only agents don't need telephony sync
     vapiAgentId = `chat_${Date.now()}`;
   }
 

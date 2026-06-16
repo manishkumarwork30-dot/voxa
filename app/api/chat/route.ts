@@ -121,36 +121,66 @@ export async function POST(request: NextRequest) {
     let aiResponse = "";
 
     try {
-      // Use VAPI API key to call an LLM (fallback to a simple echo response)
-      const { data: admin } = await supabase
-        .from("users")
-        .select("vapi_api_key")
-        .eq("id", agent.admin_id)
-        .single();
-
-      if (admin?.vapi_api_key) {
-        // Use Anthropic API via VAPI's model config
-        const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
+      // Try OpenAI gpt-4o-mini first if configured (highly cost-effective and fast)
+      if (process.env.OPENAI_API_KEY) {
+        const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "x-api-key": process.env.ANTHROPIC_API_KEY || "",
-            "anthropic-version": "2023-06-01",
+            Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
           },
           body: JSON.stringify({
-            model: "claude-sonnet-4-20250514",
+            model: "gpt-4o-mini",
             max_tokens: 500,
-            system: systemPrompt,
-            messages: existingMessages.map((m: { role: string; content: string }) => ({
-              role: m.role === "user" ? "user" : "assistant",
-              content: m.content,
-            })),
+            messages: [
+              { role: "system", content: systemPrompt },
+              ...existingMessages.map((m: { role: string; content: string }) => ({
+                role: m.role === "user" ? "user" : "assistant",
+                content: m.content,
+              })),
+            ],
           }),
         });
 
-        if (anthropicRes.ok) {
-          const anthropicData = await anthropicRes.json();
-          aiResponse = anthropicData.content?.[0]?.text || "";
+        if (openaiRes.ok) {
+          const openaiData = await openaiRes.json();
+          aiResponse = openaiData.choices?.[0]?.message?.content || "";
+        } else {
+          console.warn("OpenAI API response error:", await openaiRes.text());
+        }
+      }
+
+      // Fallback to Anthropic if OpenAI wasn't used/available
+      if (!aiResponse) {
+        const { data: admin } = await supabase
+          .from("users")
+          .select("vapi_api_key")
+          .eq("id", agent.admin_id)
+          .single();
+
+        if (admin?.vapi_api_key) {
+          const anthropicRes = await fetch("https://api.anthropic.com/v1/messages", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-api-key": process.env.ANTHROPIC_API_KEY || "",
+              "anthropic-version": "2023-06-01",
+            },
+            body: JSON.stringify({
+              model: "claude-sonnet-4-20250514",
+              max_tokens: 500,
+              system: systemPrompt,
+              messages: existingMessages.map((m: { role: string; content: string }) => ({
+                role: m.role === "user" ? "user" : "assistant",
+                content: m.content,
+              })),
+            }),
+          });
+
+          if (anthropicRes.ok) {
+            const anthropicData = await anthropicRes.json();
+            aiResponse = anthropicData.content?.[0]?.text || "";
+          }
         }
       }
 

@@ -1,7 +1,7 @@
 /* eslint-disable */
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-this-in-production";
 
@@ -30,8 +30,7 @@ export async function GET(request: NextRequest) {
   const page = parseInt(searchParams.get("page") || "1");
   const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 200);
 
-  let query = supabase
-    .from("leads")
+  let query = supabaseAdmin.from("leads")
     .select("*, campaigns(name), calls(direction, duration_sec)")
     .order("created_at", { ascending: false });
 
@@ -89,8 +88,7 @@ export async function POST(request: NextRequest) {
   const { customer_name, phone, email, campaign_id, call_id, response_text } = body;
   if (!phone) return NextResponse.json({ error: "Phone number is required" }, { status: 400 });
 
-  const { data: lead, error } = await supabase
-    .from("leads")
+  const { data: lead, error } = await supabaseAdmin.from("leads")
     .insert({
       admin_id: decoded.userId,
       campaign_id: campaign_id || null,

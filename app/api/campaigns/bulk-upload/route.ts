@@ -131,8 +131,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Save Agent to database
-    const { data: agent, error: agentErr } = await supabase
-      .from("agents")
+    const { data: agent, error: agentErr } = await supabaseAdmin.from("agents")
       .insert({
         name: `${campaignName} Agent`,
         language,
@@ -151,8 +150,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Create the Outbound Campaign
-    const { data: campaign, error: campaignErr } = await supabase
-      .from("campaigns")
+    const { data: campaign, error: campaignErr } = await supabaseAdmin.from("campaigns")
       .insert({
         name: campaignName,
         admin_id: adminId,

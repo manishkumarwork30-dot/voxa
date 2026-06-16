@@ -123,8 +123,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if agent exists and belongs to this admin
-    const { data: agent, error: agentError } = await supabase
-      .from("agents")
+    const { data: agent, error: agentError } = await supabaseAdmin.from("agents")
       .select("id")
       .eq("id", agent_id)
       .eq("admin_id", decoded.userId!)
@@ -167,8 +166,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create campaign
-    const { data: campaign, error: insertError } = await supabase
-      .from("campaigns")
+    const { data: campaign, error: insertError } = await supabaseAdmin.from("campaigns")
       .insert({
         name,
         agent_id,

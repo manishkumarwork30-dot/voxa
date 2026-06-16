@@ -37,8 +37,7 @@ export async function GET(
     }
 
     // Fetch associated calls
-    const { data: calls, error: callsErr } = await supabase
-      .from("calls")
+    const { data: calls, error: callsErr } = await supabaseAdmin.from("calls")
       .select(`
         id,
         vapi_call_id,

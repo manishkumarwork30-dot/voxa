@@ -28,8 +28,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Fetch the agent
-    const { data: agent, error: agentErr } = await supabase
-      .from("agents")
+    const { data: agent, error: agentErr } = await supabaseAdmin.from("agents")
       .select("*")
       .eq("id", agent_id)
       .single();
@@ -59,8 +58,7 @@ export async function POST(request: NextRequest) {
     // Get or create conversation
     let conversationData;
     if (conversation_id) {
-      const { data: existing } = await supabase
-        .from("chat_conversations")
+      const { data: existing } = await supabaseAdmin.from("chat_conversations")
         .select("*")
         .eq("id", conversation_id)
         .single();
@@ -72,8 +70,7 @@ export async function POST(request: NextRequest) {
 
     if (!conversationData) {
       // Create new conversation
-      const { data: newConv, error: convErr } = await supabase
-        .from("chat_conversations")
+      const { data: newConv, error: convErr } = await supabaseAdmin.from("chat_conversations")
         .insert({
           admin_id: agent.admin_id,
           agent_id: agent.id,
@@ -208,8 +205,7 @@ export async function POST(request: NextRequest) {
     const intentResult = detectIntent(fullTranscript);
 
     // Update conversation in DB
-    await supabase
-      .from("chat_conversations")
+    await supabaseAdmin.from("chat_conversations")
       .update({
         messages: existingMessages,
         visitor_name: visitor_name || conversationData.visitor_name,

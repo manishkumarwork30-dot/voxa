@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-this-in-production";
 
@@ -31,8 +31,7 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get("status");
   const limit = parseInt(searchParams.get("limit") || "50");
 
-  let query = supabase
-    .from("chat_conversations")
+  let query = supabaseAdmin.from("chat_conversations")
     .select("id, admin_id, agent_id, visitor_name, visitor_email, visitor_phone, status, intent_result, created_at, ended_at")
     .order("created_at", { ascending: false })
     .limit(limit);

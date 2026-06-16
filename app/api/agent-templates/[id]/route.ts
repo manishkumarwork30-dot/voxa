@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-this-in-production";
 
@@ -30,8 +30,7 @@ export async function GET(
 
   const { id } = await params;
 
-  const { data: template, error } = await supabase
-    .from("agent_templates")
+  const { data: template, error } = await supabaseAdmin.from("agent_templates")
     .select("*")
     .eq("id", id)
     .single();
@@ -79,8 +78,7 @@ export async function PATCH(
     }
   }
 
-  const { data: template, error } = await supabase
-    .from("agent_templates")
+  const { data: template, error } = await supabaseAdmin.from("agent_templates")
     .update(updates)
     .eq("id", id)
     .select("*")
@@ -111,16 +109,14 @@ export async function DELETE(
   const { id } = await params;
 
   // Check if any agents reference this template
-  const { count } = await supabase
-    .from("agents")
+  const { count } = await supabaseAdmin.from("agents")
     .select("id", { count: "exact", head: true })
     .eq("template_id", id)
     .neq("status", "DELETED");
 
   if ((count ?? 0) > 0) {
     // Soft-hide instead of deleting
-    await supabase
-      .from("agent_templates")
+    await supabaseAdmin.from("agent_templates")
       .update({ is_visible: false, updated_at: new Date().toISOString() })
       .eq("id", id);
 
@@ -129,8 +125,7 @@ export async function DELETE(
     });
   }
 
-  const { error } = await supabase
-    .from("agent_templates")
+  const { error } = await supabaseAdmin.from("agent_templates")
     .delete()
     .eq("id", id);
 

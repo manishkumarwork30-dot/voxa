@@ -28,8 +28,7 @@ export async function POST(
   const { id } = await params;
 
   // Fetch campaign
-  const { data: campaign, error: campErr } = await supabase
-    .from("campaigns")
+  const { data: campaign, error: campErr } = await supabaseAdmin.from("campaigns")
     .select("*, agents(vapi_agent_id, status)")
     .eq("id", id)
     .eq("admin_id", adminId)
@@ -65,8 +64,7 @@ export async function POST(
   const remainingContacts = contacts.slice(startIndex);
 
   // Mark campaign as RUNNING
-  await supabase
-    .from("campaigns")
+  await supabaseAdmin.from("campaigns")
     .update({ status: "RUNNING", current_index: startIndex })
     .eq("id", id);
 
@@ -84,8 +82,7 @@ export async function POST(
 
     for (let i = 0; i < remainingContacts.length; i++) {
       // Check if campaign was paused/stopped
-      const { data: currentCampaign } = await supabase
-        .from("campaigns").select("status").eq("id", id).single();
+      const { data: currentCampaign } = await supabaseAdmin.from("campaigns").select("status").eq("id", id).single();
       if (currentCampaign?.status !== "RUNNING") break;
 
       // Check call limits
@@ -161,8 +158,7 @@ export async function POST(
         .update({ monthly_calls_used: (freshAdmin.monthly_calls_used || 0) + 1 })
         .eq("id", adminId);
 
-      await supabase
-        .from("campaigns")
+      await supabaseAdmin.from("campaigns")
         .update({
           total_calls: campaign.total_calls + callsMade,
           current_index: startIndex + i + 1,

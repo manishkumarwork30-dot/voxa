@@ -29,8 +29,7 @@ export async function GET(request: NextRequest) {
   const decoded = getAuth(request);
   if (!decoded) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  let query = supabase
-    .from("agent_templates")
+  let query = supabaseAdmin.from("agent_templates")
     .select("*")
     .order("created_at", { ascending: false });
 
@@ -122,8 +121,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid category" }, { status: 400 });
   }
 
-  const { data: template, error } = await supabase
-    .from("agent_templates")
+  const { data: template, error } = await supabaseAdmin.from("agent_templates")
     .insert({
       name,
       description: description || null,

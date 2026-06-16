@@ -48,8 +48,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (customer_name) updates.customer_name = customer_name;
   if (email) updates.email = email;
 
-  const { data: lead, error } = await supabase
-    .from("leads").update(updates).eq("id", id).eq("admin_id", decoded.userId!).select("*").single();
+  const { data: lead, error } = await supabaseAdmin.from("leads").update(updates).eq("id", id).eq("admin_id", decoded.userId!).select("*").single();
 
   if (error || !lead) return NextResponse.json({ error: "Lead not found or update failed" }, { status: 404 });
   return NextResponse.json({ message: "Lead updated", lead });

@@ -67,8 +67,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify agent belongs to this admin
-    const { data: agent } = await supabase
-      .from("agents").select("vapi_agent_id").eq("id", agent_id).eq("admin_id", decoded.userId!).single();
+    const { data: agent } = await supabaseAdmin.from("agents").select("vapi_agent_id").eq("id", agent_id).eq("admin_id", decoded.userId!).single();
     if (!agent) return NextResponse.json({ error: "Agent not found" }, { status: 404 });
 
     await client.linkPhoneNumberToAgent(phone_number_id, agent.vapi_agent_id);

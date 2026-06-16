@@ -65,8 +65,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if agent exists and belongs to this admin
-    const { data: agent, error: agentError } = await supabase
-      .from("agents")
+    const { data: agent, error: agentError } = await supabaseAdmin.from("agents")
       .select("*")
       .eq("id", agentId)
       .eq("admin_id", adminId)
@@ -140,8 +139,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Simulate Sandbox Call
-      const { data: callRecord, error: callError } = await supabase
-        .from("calls")
+      const { data: callRecord, error: callError } = await supabaseAdmin.from("calls")
         .insert({
           vapi_call_id: `sandbox_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
           admin_id: adminId,
@@ -208,8 +206,7 @@ export async function POST(request: NextRequest) {
       .eq("id", adminId);
 
     // Create the call record
-    const { data: callRecord, error: callError } = await supabase
-      .from("calls")
+    const { data: callRecord, error: callError } = await supabaseAdmin.from("calls")
       .insert({
         vapi_call_id: callResponse.id || `call_${Date.now()}`,
         admin_id: adminId,

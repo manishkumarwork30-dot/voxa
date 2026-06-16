@@ -69,8 +69,7 @@ export async function POST(request: NextRequest) {
       let agentId: string | null = null;
 
       if (call.assistantId) {
-        const { data: agent } = await supabase
-          .from("agents")
+        const { data: agent } = await supabaseAdmin.from("agents")
           .select("id, admin_id")
           .eq("vapi_agent_id", call.assistantId)
           .single();
@@ -103,8 +102,7 @@ export async function POST(request: NextRequest) {
     if (type === "transcript" && call?.id) {
       const transcript = message?.transcript || call.transcript;
       if (transcript) {
-        await supabase
-          .from("calls")
+        await supabaseAdmin.from("calls")
           .update({ transcript })
           .eq("vapi_call_id", call.id);
       }
@@ -128,8 +126,7 @@ export async function POST(request: NextRequest) {
       const cost = message?.cost || call.cost || null;
 
       // Update call record
-      await supabase
-        .from("calls")
+      await supabaseAdmin.from("calls")
         .update({
           status,
           duration_sec: Math.round(duration),
@@ -148,8 +145,7 @@ export async function POST(request: NextRequest) {
 
         if (intent.isLead) {
           // Fetch call record to get admin_id, agent_id, campaign_id
-          const { data: callRecord } = await supabase
-            .from("calls")
+          const { data: callRecord } = await supabaseAdmin.from("calls")
             .select("id, admin_id, campaign_id, caller_number")
             .eq("vapi_call_id", call.id)
             .single();
@@ -158,8 +154,7 @@ export async function POST(request: NextRequest) {
             // Fetch campaign name if present
             let campaignName: string | undefined;
             if (callRecord.campaign_id) {
-              const { data: camp } = await supabase
-                .from("campaigns")
+              const { data: camp } = await supabaseAdmin.from("campaigns")
                 .select("name")
                 .eq("id", callRecord.campaign_id)
                 .single();
@@ -175,8 +170,7 @@ export async function POST(request: NextRequest) {
                 // RPC may not exist, do manual update
                 const { data: currentCamp } = await supabaseAdmin.from("campaigns").select("success_count").eq("id", callRecord.campaign_id).single();
                 if (currentCamp) {
-                  await supabase
-                    .from("campaigns")
+                  await supabaseAdmin.from("campaigns")
                     .update({ success_count: (currentCamp.success_count || 0) + 1 })
                     .eq("id", callRecord.campaign_id);
                 }
@@ -184,8 +178,7 @@ export async function POST(request: NextRequest) {
             }
 
             // Create lead record
-            const { data: lead, error: leadErr } = await supabase
-              .from("leads")
+            const { data: lead, error: leadErr } = await supabaseAdmin.from("leads")
               .insert({
                 admin_id: callRecord.admin_id,
                 campaign_id: callRecord.campaign_id || null,

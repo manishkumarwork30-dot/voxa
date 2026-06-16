@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { detectIntent } from "@/lib/intent";
 import { sendLeadNotification } from "@/lib/notifications";
 
@@ -24,8 +24,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Find the call in database
-    const { data: callRecord, error: findError } = await supabase
-      .from("calls")
+    const { data: callRecord, error: findError } = await supabaseAdmin.from("calls")
       .select("*")
       .eq("vapi_call_id", call_id)
       .single();
@@ -54,8 +53,7 @@ export async function POST(request: NextRequest) {
     const costUsd = cost || null;
 
     // Update call details in DB
-    const { error: updateError } = await supabase
-      .from("calls")
+    const { error: updateError } = await supabaseAdmin.from("calls")
       .update({
         status,
         duration_sec: Math.round(durationSec),
@@ -76,8 +74,7 @@ export async function POST(request: NextRequest) {
 
       if (intent.isLead) {
         // Check if lead already exists for this call to prevent duplicates
-        const { data: existingLead } = await supabase
-          .from("leads")
+        const { data: existingLead } = await supabaseAdmin.from("leads")
           .select("id")
           .eq("call_id", callRecord.id)
           .maybeSingle();
@@ -87,8 +84,7 @@ export async function POST(request: NextRequest) {
 
           if (callRecord.campaign_id) {
             // Fetch campaign name
-            const { data: camp } = await supabase
-              .from("campaigns")
+            const { data: camp } = await supabaseAdmin.from("campaigns")
               .select("name, success_count")
               .eq("id", callRecord.campaign_id)
               .single();
@@ -97,15 +93,13 @@ export async function POST(request: NextRequest) {
 
             // Increment campaign success_count
             const currentSuccessCount = camp?.success_count || 0;
-            await supabase
-              .from("campaigns")
+            await supabaseAdmin.from("campaigns")
               .update({ success_count: currentSuccessCount + 1 })
               .eq("id", callRecord.campaign_id);
           }
 
           // Create lead record
-          const { data: lead, error: leadErr } = await supabase
-            .from("leads")
+          const { data: lead, error: leadErr } = await supabaseAdmin.from("leads")
             .insert({
               admin_id: callRecord.admin_id,
               campaign_id: callRecord.campaign_id || null,

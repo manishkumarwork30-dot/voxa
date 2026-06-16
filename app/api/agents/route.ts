@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Save to DB
-  const { data: agent, error } = await supabase
+  const { data: agent, error } = await supabaseAdmin
     .from("agents")
     .insert({
       name,

@@ -44,8 +44,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const { id } = await params;
 
   // Check ownership
-  const { data: existingAgent } = await supabase
-    .from("agents").select("*").eq("id", id).eq("admin_id", adminId).single();
+  const { data: existingAgent } = await supabaseAdmin.from("agents").select("*").eq("id", id).eq("admin_id", adminId).single();
   if (!existingAgent) return NextResponse.json({ error: "Agent not found" }, { status: 404 });
 
   const body = await request.json();
@@ -95,8 +94,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     }
   }
 
-  const { data: agent, error } = await supabase
-    .from("agents").update(updates).eq("id", id).select("*").single();
+  const { data: agent, error } = await supabaseAdmin.from("agents").update(updates).eq("id", id).select("*").single();
 
   if (error) return NextResponse.json({ error: "Failed to update agent" }, { status: 500 });
   return NextResponse.json({ message: "Agent updated", agent });
@@ -110,8 +108,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
   const adminId = decoded.userId!;
   const { id } = await params;
-  const { data: existingAgent } = await supabase
-    .from("agents").select("*").eq("id", id).eq("admin_id", adminId).single();
+  const { data: existingAgent } = await supabaseAdmin.from("agents").select("*").eq("id", id).eq("admin_id", adminId).single();
   if (!existingAgent) return NextResponse.json({ error: "Agent not found" }, { status: 404 });
 
   // Delete from Telephony provider first

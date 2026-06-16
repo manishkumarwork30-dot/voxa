@@ -24,8 +24,7 @@ export async function POST(
   if (decoded.role !== "ADMIN" && decoded.role !== "SUPER_ADMIN") return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
 
   const { id } = await params;
-  const { data: campaign } = await supabase
-    .from("campaigns")
+  const { data: campaign } = await supabaseAdmin.from("campaigns")
     .select("status")
     .eq("id", id)
     .eq("admin_id", decoded.userId!)

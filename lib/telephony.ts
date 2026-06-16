@@ -125,7 +125,7 @@ export class TelephonyClient {
         throw new Error(`Bland AI error: ${await res.text()}`);
       }
       const data = await res.json();
-      return { id: data.agent_id };
+      return { id: data.agent_id || data.agent?.agent_id || data.id };
     }
 
     if (this.provider === 'TELNYX') {

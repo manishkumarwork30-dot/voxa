@@ -27,8 +27,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Allow ADMIN and USER roles to initiate calls
-    if (decoded.role !== "ADMIN" && decoded.role !== "USER") {
+    // Allow ADMIN, USER, and SUPER_ADMIN roles to initiate calls
+    if (decoded.role !== "ADMIN" && decoded.role !== "USER" && decoded.role !== "SUPER_ADMIN") {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }

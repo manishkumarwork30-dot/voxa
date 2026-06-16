@@ -22,7 +22,7 @@ export async function POST(
 ) {
   const decoded = getAuth(request);
   if (!decoded) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (decoded.role !== "ADMIN") return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
+  if (decoded.role !== "ADMIN" && decoded.role !== "SUPER_ADMIN") return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
 
   const adminId = decoded.userId!;
   const { id } = await params;

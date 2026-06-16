@@ -86,8 +86,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Only admins can create campaigns
-    if (decoded.role !== "ADMIN") {
+    // Only admins and super admins can create campaigns
+    if (decoded.role !== "ADMIN" && decoded.role !== "SUPER_ADMIN") {
       return NextResponse.json(
         { error: "Insufficient permissions" },
         { status: 403 }

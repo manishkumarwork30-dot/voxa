@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const decoded = getAuth(request);
   if (!decoded) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (decoded.role !== "ADMIN") return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
+  if (decoded.role !== "ADMIN" && decoded.role !== "SUPER_ADMIN") return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
 
   const body = await request.json();
   const { customer_name, phone, email, campaign_id, call_id, response_text } = body;

@@ -34,7 +34,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const decoded = getAuth(request);
   if (!decoded) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (decoded.role !== "ADMIN") return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
+  if (decoded.role !== "ADMIN" && decoded.role !== "SUPER_ADMIN") return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
 
   const { id } = await params;
   const { status, customer_name, email } = await request.json();

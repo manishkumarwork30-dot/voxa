@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-this-in-production";
 
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
   let filteredTemplates = templates || [];
   if (decoded.role === "ADMIN") {
     const adminId = decoded.userId;
-    const { data: admin } = await supabase
+    const { data: admin } = await supabaseAdmin
       .from("users")
       .select("plan")
       .eq("id", adminId!)

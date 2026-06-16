@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import { getTelephonyClientForAdmin } from "@/lib/telephony";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-this-in-production";
 
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
       
       // If purchase succeeded, optionally update admin's bland_phone_number field in DB
       if (purchaseResult && purchaseResult.phone_number) {
-        await supabase
+        await supabaseAdmin
           .from("users")
           .update({ bland_phone_number: purchaseResult.phone_number })
           .eq("id", decoded.userId!);

@@ -1,6 +1,6 @@
 /* eslint-disable */
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { compileFlowToPrompt } from "@/lib/flow-compiler";
 import { detectIntent } from "@/lib/intent";
 
@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
 
       // Fallback to Anthropic if OpenAI wasn't used/available
       if (!aiResponse) {
-        const { data: admin } = await supabase
+        const { data: admin } = await supabaseAdmin
           .from("users")
           .select("vapi_api_key")
           .eq("id", agent.admin_id)

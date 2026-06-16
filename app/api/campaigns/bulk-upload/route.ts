@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { decrypt } from "@/lib/encrypt";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-this-in-production";
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
 
     // 1. Create or Find Bland Agent for this Campaign
     // First fetch admin info to verify credentials
-    const { data: admin } = await supabase
+    const { data: admin } = await supabaseAdmin
       .from("users")
       .select("is_active, bland_api_key, telephony_provider")
       .eq("id", adminId)

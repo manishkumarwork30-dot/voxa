@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import { getTelephonyClientForAdmin } from "@/lib/telephony";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-this-in-production";
 
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if admin exists and is active
-    const { data: admin, error: adminError } = await supabase
+    const { data: admin, error: adminError } = await supabaseAdmin
       .from("users")
       .select("*")
       .eq("id", adminId)
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
 
     if (isMock) {
       // Increment call count
-      await supabase
+      await supabaseAdmin
         .from("users")
         .update({ monthly_calls_used: (admin.monthly_calls_used || 0) + 1 })
         .eq("id", adminId);
@@ -202,7 +202,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Increment call count
-    await supabase
+    await supabaseAdmin
       .from("users")
       .update({ monthly_calls_used: (admin.monthly_calls_used || 0) + 1 })
       .eq("id", adminId);

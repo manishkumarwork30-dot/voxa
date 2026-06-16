@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { getVapiClientForAdmin } from "@/lib/vapi";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-this-in-production";
@@ -47,7 +47,7 @@ export async function POST(
   if (!agent || agent.status !== "ACTIVE") return NextResponse.json({ error: "Agent is not active" }, { status: 400 });
 
   // Fetch admin for call limit check
-  const { data: admin } = await supabase
+  const { data: admin } = await supabaseAdmin
     .from("users")
     .select("monthly_calls_limit, monthly_calls_used, vapi_phone_number, retell_phone_number, bland_phone_number, telnyx_phone_number, vapi_api_key, retell_api_key, bland_api_key, telnyx_api_key, is_active")
     .eq("id", adminId)
@@ -89,7 +89,7 @@ export async function POST(
       if (currentCampaign?.status !== "RUNNING") break;
 
       // Check call limits
-      const { data: freshAdmin } = await supabase
+      const { data: freshAdmin } = await supabaseAdmin
         .from("users")
         .select("monthly_calls_limit, monthly_calls_used, vapi_phone_number, retell_phone_number, bland_phone_number, telnyx_phone_number, vapi_api_key, retell_api_key, bland_api_key, telnyx_api_key")
         .eq("id", adminId)
@@ -156,7 +156,7 @@ export async function POST(
 
       // Increment counts
       callsMade++;
-      await supabase
+      await supabaseAdmin
         .from("users")
         .update({ monthly_calls_used: (freshAdmin.monthly_calls_used || 0) + 1 })
         .eq("id", adminId);

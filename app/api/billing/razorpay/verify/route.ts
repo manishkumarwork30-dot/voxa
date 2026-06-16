@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-this-in-production";
 
@@ -53,7 +53,7 @@ async function upgradeUserPlan(decoded: { userId?: string }, plan: string) {
   }
   const userId = decoded.userId;
 
-  const { data: user, error: fetchError } = await supabase
+  const { data: user, error: fetchError } = await supabaseAdmin
     .from("users")
     .select("id")
     .eq("id", userId!)
@@ -67,7 +67,7 @@ async function upgradeUserPlan(decoded: { userId?: string }, plan: string) {
   if (upperPlan === "PRO") callsLimit = 1000;
   else if (upperPlan === "ENTERPRISE") callsLimit = 10000;
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await supabaseAdmin
     .from("users")
     .update({
       plan: upperPlan,

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { getLanguageCode } from "@/lib/vapi";
 import { getTelephonyClientForAdmin } from "@/lib/telephony";
 import { compileFlowToPrompt } from "@/lib/flow-compiler";
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
   const adminId = decoded.userId!;
 
   // Check admin exists + plan limits
-  const { data: admin } = await supabase.from("users")
+  const { data: admin } = await supabaseAdmin.from("users")
     .select("is_active, plan, vapi_api_key, retell_api_key, bland_api_key, telnyx_api_key, telephony_provider")
     .eq("id", adminId)
     .single();

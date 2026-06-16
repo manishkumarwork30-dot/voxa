@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
       flow_builder: flow_builder || { blocks: [] },
       tone: tone || "friendly",
       type,
-      template_id: template_id || null,
+      template_id: (template_id && /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(template_id)) ? template_id : null,
       call_flow: call_flow || { nodes: [], edges: [] },
       chat_config: chat_config || {
         welcome_message: "Hello! How can I help you?",

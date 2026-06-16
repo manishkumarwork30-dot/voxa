@@ -221,7 +221,7 @@ export async function POST(request: NextRequest) {
 
     // If intent detected as lead, create lead record
     if (intentResult.isLead && intentResult.score >= 0.6) {
-      const { error: leadErr } = await supabase.from("leads").insert({
+      const { error: leadErr } = await supabaseAdmin.from("leads").insert({
         admin_id: agent.admin_id,
         call_id: null,
         customer_name: visitor_name || intentResult.customerName || "Chat Visitor",

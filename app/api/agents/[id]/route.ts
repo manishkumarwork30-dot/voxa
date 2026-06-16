@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { getTelephonyClientForAdmin } from "@/lib/telephony";
 import { compileFlowToPrompt } from "@/lib/flow-compiler";
 
@@ -25,7 +25,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
   const { id } = await params;
   const adminId = decoded.role === "USER" ? decoded.adminId : decoded.userId;
-  let query = supabase.from("agents").select("*").eq("id", id);
+  let query = supabaseAdmin.from("agents").select("*").eq("id", id);
   if (decoded.role !== "SUPER_ADMIN") query = query.eq("admin_id", adminId!);
 
   const { data: agent, error } = await query.single();
@@ -126,7 +126,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   }
 
   // Mark as DELETED in DB (soft delete)
-  await supabase.from("agents").update({ status: "DELETED" }).eq("id", id);
+  await supabaseAdmin.from("agents").update({ status: "DELETED" }).eq("id", id);
 
   return NextResponse.json({ message: "Agent deleted" });
 }

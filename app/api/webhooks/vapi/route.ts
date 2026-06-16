@@ -1,6 +1,6 @@
 /* eslint-disable */
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 import { detectIntent } from "@/lib/intent";
 import { sendLeadNotification } from "@/lib/notifications";
 
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
 
       if (adminId && agentId) {
         // Create call record
-        const { error } = await supabase.from("calls").insert({
+        const { error } = await supabaseAdmin.from("calls").insert({
           vapi_call_id: call.id,
           admin_id: adminId,
           agent_id: agentId,
@@ -167,13 +167,13 @@ export async function POST(request: NextRequest) {
 
               // Increment campaign success_count
               try {
-                const { error: rpcErr } = await supabase.rpc("increment_campaign_success", {
+                const { error: rpcErr } = await supabaseAdmin.rpc("increment_campaign_success", {
                   campaign_id_arg: callRecord.campaign_id,
                 });
                 if (rpcErr) throw rpcErr;
               } catch (e) {
                 // RPC may not exist, do manual update
-                const { data: currentCamp } = await supabase.from("campaigns").select("success_count").eq("id", callRecord.campaign_id).single();
+                const { data: currentCamp } = await supabaseAdmin.from("campaigns").select("success_count").eq("id", callRecord.campaign_id).single();
                 if (currentCamp) {
                   await supabase
                     .from("campaigns")

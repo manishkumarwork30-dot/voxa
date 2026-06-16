@@ -107,7 +107,7 @@ export async function POST(
 
       if (isMock) {
         // Sandbox mode
-        await supabase.from("calls").insert({
+        await supabaseAdmin.from("calls").insert({
           vapi_call_id: `sandbox_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
           admin_id: adminId,
           agent_id: campaign.agent_id,
@@ -140,7 +140,7 @@ export async function POST(
             customerName: contactName,
           });
 
-          await supabase.from("calls").insert({
+          await supabaseAdmin.from("calls").insert({
             vapi_call_id: callResult.id || `call_${Date.now()}`,
             admin_id: adminId,
             agent_id: campaign.agent_id,
@@ -176,10 +176,10 @@ export async function POST(
     }
 
     // Mark campaign as COMPLETED if all contacts dialed
-    const { data: c } = await supabase.from("campaigns").select("status, current_index").eq("id", id).single();
+    const { data: c } = await supabaseAdmin.from("campaigns").select("status, current_index").eq("id", id).single();
     if (c?.status === "RUNNING") {
       const isComplete = (c.current_index || 0) >= contacts.length;
-      await supabase.from("campaigns").update({ status: isComplete ? "COMPLETED" : "PAUSED" }).eq("id", id);
+      await supabaseAdmin.from("campaigns").update({ status: isComplete ? "COMPLETED" : "PAUSED" }).eq("id", id);
     }
   })().catch(console.error);
 

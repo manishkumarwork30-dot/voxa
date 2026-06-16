@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-this-in-production";
 
@@ -37,7 +37,7 @@ export async function POST(
     return NextResponse.json({ error: "Campaign is not currently running" }, { status: 400 });
   }
 
-  await supabase.from("campaigns").update({ status: "PAUSED" }).eq("id", id);
+  await supabaseAdmin.from("campaigns").update({ status: "PAUSED" }).eq("id", id);
 
   return NextResponse.json({ message: "Campaign paused. Dialing will stop after current call." });
 }

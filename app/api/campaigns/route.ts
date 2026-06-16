@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    let query = supabase.from("campaigns").select("*").order("created_at", { ascending: false });
+    let query = supabaseAdmin.from("campaigns").select("*").order("created_at", { ascending: false });
 
     if (decoded.role !== "SUPER_ADMIN") {
       const adminId = decoded.role === "USER" ? decoded.adminId : decoded.userId;

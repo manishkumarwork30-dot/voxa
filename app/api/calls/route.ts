@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-this-in-production";
 
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    let query = supabase.from("calls").select("*").order("created_at", { ascending: false });
+    let query = supabaseAdmin.from("calls").select("*").order("created_at", { ascending: false });
 
     // Super admins can see all calls
     if (decoded.role === "SUPER_ADMIN") {

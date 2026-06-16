@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-this-in-production";
 
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
   const { id } = await params;
   const adminId = decoded.role === "USER" ? decoded.adminId : decoded.userId;
-  let query = supabase.from("leads").select("*, campaigns(name), calls(*)").eq("id", id);
+  let query = supabaseAdmin.from("leads").select("*, campaigns(name), calls(*)").eq("id", id);
   if (decoded.role !== "SUPER_ADMIN") query = query.eq("admin_id", adminId!);
 
   const { data: lead, error } = await query.single();

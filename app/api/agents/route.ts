@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
   }
 
-  let query = supabase.from("agents").select("*").order("created_at", { ascending: false });
+  let query = supabaseAdmin.from("agents").select("*").order("created_at", { ascending: false });
 
   if (decoded.role !== "SUPER_ADMIN") {
     const adminId = decoded.role === "USER" ? decoded.adminId : decoded.userId;
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
 
   if (!admin?.is_active) return NextResponse.json({ error: "Admin not found or inactive" }, { status: 404 });
 
-  const { count: currentCount } = await supabase.from("agents").select("id", { count: "exact", head: true }).eq("admin_id", adminId);
+  const { count: currentCount } = await supabaseAdmin.from("agents").select("id", { count: "exact", head: true }).eq("admin_id", adminId);
   const maxAgents = admin.plan === "ENTERPRISE" ? 1000 : admin.plan === "PRO" ? 5 : 1;
   if ((currentCount ?? 0) >= maxAgents) {
     return NextResponse.json({ error: `Agent limit reached for ${admin.plan} plan (max ${maxAgents})` }, { status: 403 });

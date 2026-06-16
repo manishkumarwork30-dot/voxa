@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import jwt from "jsonwebtoken";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseAdmin } from "@/lib/supabase";
 
 const JWT_SECRET = process.env.JWT_SECRET || "your-super-secret-jwt-key-change-this-in-production";
 
@@ -26,7 +26,7 @@ export async function GET(
     const adminId = decoded.role === "USER" ? decoded.adminId : decoded.userId;
 
     // Fetch campaign
-    let query = supabase.from("campaigns").select("*, agents(name, language)").eq("id", id);
+    let query = supabaseAdmin.from("campaigns").select("*, agents(name, language)").eq("id", id);
     if (decoded.role !== "SUPER_ADMIN") {
       query = query.eq("admin_id", adminId!);
     }
